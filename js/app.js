@@ -3,9 +3,8 @@
   let selection = { categoryId: CATEGORIES[0].id, subcategoryId: null }; // subcategoryId null = "전체"
   let editingBlockId = null;
   let currentBlockId = null;
-  let workingImages = []; // [{id, url}]
+  let workingSegments = []; // [{type:'text', id, text}] | [{type:'image', id, images:[{id,url}]}]
   let workingThumbnailIds = []; // 최대 2개, 선택 순서 유지
-  let workingSameRow = []; // workingImages와 같은 길이. true면 바로 앞 이미지와 한 줄로 묶임
 
   const $ = sel => document.querySelector(sel);
 
@@ -15,20 +14,18 @@
   const breadcrumb = $('#breadcrumb');
 
   const viewModal = $('#viewModal');
-  const viewGallery = $('#viewGallery');
+  const viewSegments = $('#viewSegments');
   const viewMeta = $('#viewMeta');
   const viewTitle = $('#viewTitle');
-  const viewContent = $('#viewContent');
 
   const editModal = $('#editModal');
   const editModalTitle = $('#editModalTitle');
   const editCategorySelect = $('#editCategorySelect');
   const editSubcategorySelect = $('#editSubcategorySelect');
   const editTitleInput = $('#editTitleInput');
-  const editContentInput = $('#editContentInput');
-  const editImageUrlInput = $('#editImageUrlInput');
-  const editImageUrlAddBtn = $('#editImageUrlAddBtn');
-  const editImageGrid = $('#editImageGrid');
+  const editSegmentList = $('#editSegmentList');
+  const addTextSegmentBtn = $('#addTextSegmentBtn');
+  const addImageSegmentBtn = $('#addImageSegmentBtn');
   const editSaveBtn = $('#editSaveBtn');
 
   function icons() {
@@ -37,8 +34,8 @@
 
   // lucide에 없는 아이콘을 직접 그려서 채워넣은 것 (lucide와 같은 24x24 스트로크 스타일)
   const CUSTOM_ICONS = {
-    butterfly: `<path d="M12 8c0-3.5-2.5-6-5.5-6C4 2 2 4 2 6.5 2 9.5 4.5 12 8 13c-3.5 1-6 3.5-6 6.5C2 22 4 22 6.5 22 9.5 22 12 19.5 12 16"/><path d="M12 8c0-3.5 2.5-6 5.5-6C20 2 22 4 22 6.5c0 3-2.5 5.5-6 6.5 3.5 1 6 3.5 6 6.5 0 2.5-2 2.5-4.5 2.5-3 0-5.5-2.5-5.5-5.5"/><path d="M12 8v8"/>`,
-    basketball: `<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M9 3.5Q12 12 9 20.5"/><path d="M15 3.5Q12 12 15 20.5"/>`
+    butterfly: `<path d="M12 6.3c0-2.4-2-4.3-4.3-4.3S3.4 3.9 3.4 6.3c0 3.2 2.2 5.4 4.3 6.4-2.1 1-4.3 3.2-4.3 6.4 0 2.4 2 4.3 4.3 4.3s4.3-1.9 4.3-4.3"/><path d="M12 6.3c0-2.4 2-4.3 4.3-4.3s4.3 1.9 4.3 4.3c0 3.2-2.2 5.4-4.3 6.4 2.1 1 4.3 3.2 4.3 6.4 0 2.4-2 4.3-4.3 4.3s-4.3-1.9-4.3-4.3"/>`,
+    basketball: `<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M7.5 3.5Q12 12 7.5 20.5"/><path d="M16.5 3.5Q12 12 16.5 20.5"/>`
   };
 
   function iconHTML(name) {
@@ -60,30 +57,15 @@
     return (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2));
   }
 
-  // 이미지 묶음 레이아웃: imageLayout은 [한 줄에 들어갈 이미지 개수, ...] 형태로 저장한다.
-  // (예: [1,2,1] = 1번째 이미지 혼자, 2~3번째 이미지 한 줄, 4번째 이미지 혼자)
-  // 편집 화면에서는 다루기 쉽게 "바로 앞 이미지와 같은 줄인지" boolean 배열로 변환해서 쓴다.
-  function layoutToSameRowFlags(images, layout) {
-    const flags = images.map(() => false);
-    if (!layout || !layout.length) return flags;
-    let idx = 0;
-    layout.forEach(size => {
-      for (let j = 0; j < size && idx < flags.length; j++, idx++) {
-        if (j > 0) flags[idx] = true;
-      }
-    });
-    return flags;
+  function escapeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
   }
 
-  function sameRowFlagsToLayout(flags) {
-    const layout = [];
-    flags.forEach((sameAsPrev, i) => {
-      if (i === 0 || !sameAsPrev) layout.push(1);
-      else layout[layout.length - 1]++;
-    });
-    return layout;
-  }
-
+  // ---------- 옛 데이터 형식(content + images + imageLayout) 호환 ----------
+  // 예전에 저장된 카드는 segments 필드가 없다. 화면에 쓸 때만 즉석으로
+  // segments 배열로 변환해서 다룬다 (저장은 항상 새 형식으로 한다).
   function buildGalleryRows(images, layout) {
     const validLayout = layout && layout.reduce((sum, n) => sum + n, 0) === images.length
       ? layout
@@ -94,6 +76,24 @@
       idx += size;
       return row;
     });
+  }
+
+  function migrateBlockToSegments(block) {
+    if (block.segments) return block.segments;
+    const segments = [];
+    if (block.content) {
+      segments.push({ type: 'text', id: uid(), text: block.content });
+    }
+    buildGalleryRows(block.images || [], block.imageLayout).forEach(row => {
+      if (row.length) segments.push({ type: 'image', id: uid(), images: row });
+    });
+    return segments;
+  }
+
+  function allImages(block) {
+    return migrateBlockToSegments(block)
+      .filter(seg => seg.type === 'image')
+      .flatMap(seg => seg.images);
   }
 
   // ---------- 사이드바 ----------
@@ -171,7 +171,7 @@
   }
 
   function thumbnailHTML(block) {
-    const images = block.images || [];
+    const images = allImages(block);
     const thumbs = (block.thumbnailIds || [])
       .map(id => images.find(img => img.id === id))
       .filter(Boolean);
@@ -197,7 +197,7 @@
     blockGrid.classList.remove('hidden');
 
     blocks.forEach(block => {
-      const thumbCount = (block.thumbnailIds && block.thumbnailIds.length) || ((block.images || []).length ? 1 : 0);
+      const thumbCount = (block.thumbnailIds && block.thumbnailIds.length) || (allImages(block).length ? 1 : 0);
       const card = document.createElement('article');
       card.className = 'card';
       card.innerHTML = `
@@ -212,39 +212,32 @@
     icons();
   }
 
-  function escapeHTML(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-  }
-
   function renderMain() {
     renderBreadcrumb();
     renderGrid();
   }
 
   // ---------- 상세 보기 모달 ----------
+  function segmentViewHTML(seg) {
+    if (seg.type === 'text') {
+      return `<p class="view-text-block">${escapeHTML(seg.text || '')}</p>`;
+    }
+    const cls = seg.images.length > 1 ? 'gallery-row multi' : 'gallery-row single';
+    return `<div class="${cls}">${seg.images.map(img => `<img src="${img.url}" alt="" loading="lazy">`).join('')}</div>`;
+  }
+
   function openViewModal(blockId) {
     const block = allBlocks.find(b => b.id === blockId);
     if (!block) return;
     viewModal.dataset.blockId = blockId;
 
-    const images = block.images || [];
-    if (!images.length) {
-      viewGallery.innerHTML = `<div class="thumb-empty large"><i data-lucide="image"></i></div>`;
-    } else {
-      const rows = buildGalleryRows(images, block.imageLayout);
-      viewGallery.innerHTML = rows.map(row => {
-        const cls = row.length > 1 ? 'gallery-row multi' : 'gallery-row single';
-        return `<div class="${cls}">${row.map(img => `<img src="${img.url}" alt="" loading="lazy">`).join('')}</div>`;
-      }).join('');
-    }
+    const segments = migrateBlockToSegments(block);
+    viewSegments.innerHTML = segments.map(segmentViewHTML).join('');
 
     const sub = findSub(block.subcategoryId);
     const cat = findCategoryBySub(block.subcategoryId);
     viewMeta.textContent = cat ? `${cat.name} · ${sub.name}` : '';
     viewTitle.textContent = block.title || '(제목 없음)';
-    viewContent.textContent = block.content || '';
 
     viewModal.classList.remove('hidden');
     icons();
@@ -307,19 +300,18 @@
 
     editModalTitle.textContent = block ? '카드 수정' : '새 카드 추가';
     editTitleInput.value = block ? block.title || '' : '';
-    editContentInput.value = block ? block.content || '' : '';
-    workingImages = block
-      ? (block.images || []).map(img => ({ id: img.id, url: img.url }))
+    workingSegments = block
+      ? migrateBlockToSegments(block).map(seg => seg.type === 'text'
+        ? { type: 'text', id: seg.id, text: seg.text || '' }
+        : { type: 'image', id: seg.id, images: seg.images.map(img => ({ id: img.id, url: img.url })) })
       : [];
     workingThumbnailIds = block ? [...(block.thumbnailIds || [])] : [];
-    workingSameRow = block ? layoutToSameRowFlags(workingImages, block.imageLayout) : [];
 
     const defaultCat = block ? findCategoryBySub(block.subcategoryId).id : (selection.categoryId || CATEGORIES[0].id);
     const defaultSub = block ? block.subcategoryId : (selection.subcategoryId || CATEGORIES.find(c => c.id === defaultCat).subs[0].id);
     populateCategorySelects(defaultCat, defaultSub);
 
-    renderImageManageGrid();
-    editImageUrlInput.value = '';
+    renderSegmentList();
     editModal.classList.remove('hidden');
     icons();
   }
@@ -328,9 +320,8 @@
     editModal.classList.add('hidden');
     editingBlockId = null;
     currentBlockId = null;
-    workingImages = [];
+    workingSegments = [];
     workingThumbnailIds = [];
-    workingSameRow = [];
   }
 
   $('[data-close-edit]').addEventListener('click', closeEditModal);
@@ -340,25 +331,37 @@
   $('#addBlockBtn').addEventListener('click', () => openEditModal(null));
   $('#emptyAddBtn').addEventListener('click', () => openEditModal(null));
 
-  function addImageUrl() {
-    const url = editImageUrlInput.value.trim();
-    if (!url) return;
-    workingImages.push({ id: uid(), url });
-    workingSameRow.push(false);
-    editImageUrlInput.value = '';
-    renderImageManageGrid();
-    editImageUrlInput.focus();
+  // ---------- 구성(텍스트/이미지 박스) 편집 ----------
+  function addTextSegment() {
+    workingSegments.push({ type: 'text', id: uid(), text: '' });
+    renderSegmentList();
   }
 
-  editImageUrlAddBtn.addEventListener('click', addImageUrl);
-  editImageUrlInput.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      addImageUrl();
-    }
-  });
+  function addImageSegment() {
+    workingSegments.push({ type: 'image', id: uid(), images: [] });
+    renderSegmentList();
+  }
 
-  function buildImageCell(img, index) {
+  addTextSegmentBtn.addEventListener('click', addTextSegment);
+  addImageSegmentBtn.addEventListener('click', addImageSegment);
+
+  function moveSegment(index, dir) {
+    const target = index + dir;
+    if (target < 0 || target >= workingSegments.length) return;
+    const [seg] = workingSegments.splice(index, 1);
+    workingSegments.splice(target, 0, seg);
+    renderSegmentList();
+  }
+
+  function removeSegment(index) {
+    const seg = workingSegments[index];
+    workingThumbnailIds = workingThumbnailIds.filter(id =>
+      !(seg.type === 'image' && seg.images.some(img => img.id === id)));
+    workingSegments.splice(index, 1);
+    renderSegmentList();
+  }
+
+  function buildImageCell(img, seg) {
     const thumbIndex = workingThumbnailIds.indexOf(img.id);
     const cell = document.createElement('div');
     cell.className = 'image-manage-cell' + (thumbIndex > -1 ? ' selected' : '');
@@ -370,13 +373,9 @@
       </button>
     `;
     cell.querySelector('.image-remove').addEventListener('click', () => {
-      const i = workingImages.findIndex(im => im.id === img.id);
-      if (i > -1) {
-        workingImages.splice(i, 1);
-        workingSameRow.splice(i, 1);
-      }
+      seg.images = seg.images.filter(i => i.id !== img.id);
       workingThumbnailIds = workingThumbnailIds.filter(id => id !== img.id);
-      renderImageManageGrid();
+      renderSegmentList();
     });
     cell.querySelector('.image-thumb-toggle').addEventListener('click', () => {
       const idx = workingThumbnailIds.indexOf(img.id);
@@ -389,45 +388,84 @@
         }
         workingThumbnailIds.push(img.id);
       }
-      renderImageManageGrid();
+      renderSegmentList();
     });
     return cell;
   }
 
-  function buildRowLinkBtn(linked, onClick) {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'row-link-btn' + (linked ? ' linked' : '');
-    btn.title = linked ? '분리하기' : '이 이미지와 나란히 배치하기';
-    btn.innerHTML = `<i data-lucide="${linked ? 'link-2' : 'link'}"></i>`;
-    btn.addEventListener('click', onClick);
-    return btn;
+  function buildSegmentBox(seg, index) {
+    const box = document.createElement('div');
+    box.className = 'segment-box';
+
+    const header = document.createElement('div');
+    header.className = 'segment-box-header';
+    header.innerHTML = `
+      <span class="segment-type-label">
+        <i data-lucide="${seg.type === 'text' ? 'type' : 'image'}"></i>
+        ${seg.type === 'text' ? '텍스트' : '이미지'}
+      </span>
+      <div class="segment-controls">
+        <button type="button" class="seg-btn seg-up" title="위로"><i data-lucide="chevron-up"></i></button>
+        <button type="button" class="seg-btn seg-down" title="아래로"><i data-lucide="chevron-down"></i></button>
+        <button type="button" class="seg-btn seg-remove" title="박스 삭제"><i data-lucide="trash-2"></i></button>
+      </div>
+    `;
+    header.querySelector('.seg-up').addEventListener('click', () => moveSegment(index, -1));
+    header.querySelector('.seg-down').addEventListener('click', () => moveSegment(index, 1));
+    header.querySelector('.seg-remove').addEventListener('click', () => removeSegment(index));
+    box.appendChild(header);
+
+    if (seg.type === 'text') {
+      const textarea = document.createElement('textarea');
+      textarea.className = 'segment-textarea';
+      textarea.rows = 4;
+      textarea.placeholder = '설정, 메모, 디자인 노트 등을 자유롭게 적어주세요';
+      textarea.value = seg.text || '';
+      textarea.addEventListener('input', () => { seg.text = textarea.value; });
+      box.appendChild(textarea);
+    } else {
+      const urlRow = document.createElement('div');
+      urlRow.className = 'image-url-row';
+      urlRow.innerHTML = `
+        <input type="url" placeholder="이미지 주소(URL)를 붙여넣으세요">
+        <button type="button" class="secondary-btn"><i data-lucide="plus"></i> 추가</button>
+      `;
+      const urlInput = urlRow.querySelector('input');
+      const addBtn = urlRow.querySelector('button');
+      const addFn = () => {
+        const url = urlInput.value.trim();
+        if (!url) return;
+        seg.images.push({ id: uid(), url });
+        renderSegmentList();
+      };
+      addBtn.addEventListener('click', addFn);
+      urlInput.addEventListener('keydown', e => {
+        if (e.key === 'Enter') { e.preventDefault(); addFn(); }
+      });
+      box.appendChild(urlRow);
+
+      const grid = document.createElement('div');
+      grid.className = 'image-manage-grid';
+      if (!seg.images.length) {
+        grid.innerHTML = `<p class="hint">이 박스에 아직 이미지가 없어요. 여러 장을 넣으면 나란히 묶여요.</p>`;
+      } else {
+        seg.images.forEach(img => grid.appendChild(buildImageCell(img, seg)));
+      }
+      box.appendChild(grid);
+    }
+
+    return box;
   }
 
-  function renderImageManageGrid() {
-    editImageGrid.innerHTML = '';
-    if (!workingImages.length) {
-      editImageGrid.innerHTML = `<p class="hint">아직 추가된 이미지가 없어요.</p>`;
+  function renderSegmentList() {
+    editSegmentList.innerHTML = '';
+    if (!workingSegments.length) {
+      editSegmentList.innerHTML = `<p class="hint">아직 추가된 박스가 없어요. 아래 버튼으로 텍스트나 이미지를 추가해보세요.</p>`;
+      icons();
       return;
     }
-    workingImages.forEach((img, i) => {
-      if (i > 0) {
-        if (workingSameRow[i]) {
-          editImageGrid.appendChild(buildRowLinkBtn(true, () => {
-            workingSameRow[i] = false;
-            renderImageManageGrid();
-          }));
-        } else {
-          const rowBreak = document.createElement('div');
-          rowBreak.className = 'row-break';
-          editImageGrid.appendChild(rowBreak);
-          editImageGrid.appendChild(buildRowLinkBtn(false, () => {
-            workingSameRow[i] = true;
-            renderImageManageGrid();
-          }));
-        }
-      }
-      editImageGrid.appendChild(buildImageCell(img, i));
+    workingSegments.forEach((seg, index) => {
+      editSegmentList.appendChild(buildSegmentBox(seg, index));
     });
     icons();
   }
@@ -447,15 +485,20 @@
     editSaveBtn.disabled = true;
 
     try {
-      const images = workingImages.map(({ id, url }) => ({ id, url }));
+      const segments = workingSegments
+        .filter(seg => (seg.type === 'text' ? seg.text.trim() : seg.images.length))
+        .map(seg => seg.type === 'text'
+          ? { type: 'text', id: seg.id, text: seg.text }
+          : { type: 'image', id: seg.id, images: seg.images.map(({ id, url }) => ({ id, url })) });
+
+      const savedImageIds = segments.filter(s => s.type === 'image').flatMap(s => s.images.map(img => img.id));
+
       const block = {
         id: blockId,
         subcategoryId,
         title,
-        content: editContentInput.value,
-        images,
-        imageLayout: sameRowFlagsToLayout(workingSameRow),
-        thumbnailIds: workingThumbnailIds.filter(id => images.some(img => img.id === id)),
+        segments,
+        thumbnailIds: workingThumbnailIds.filter(id => savedImageIds.includes(id)),
         createdAt: existing ? existing.createdAt || Date.now() : Date.now(),
         updatedAt: Date.now()
       };
@@ -465,9 +508,8 @@
       selection = { categoryId: findCategoryBySub(subcategoryId).id, subcategoryId };
       editingBlockId = null;
       currentBlockId = null;
-      workingImages = [];
+      workingSegments = [];
       workingThumbnailIds = [];
-      workingSameRow = [];
       editModal.classList.add('hidden');
       toast('저장했어요.');
     } catch (err) {

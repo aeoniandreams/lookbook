@@ -173,7 +173,7 @@ input, textarea, select {
   align-items: center;
   gap: 6px;
 }
-.breadcrumb i { width: 16px; height: 16px; color: var(--text-muted); }
+.breadcrumb svg { width: 16px; height: 16px; color: var(--text-muted); }
 .crumb-muted { color: var(--text-muted); font-weight: 500; }
 
 /* ---------- 버튼 ---------- */
@@ -189,7 +189,7 @@ input, textarea, select {
 }
 .primary-btn { background: var(--accent); color: #fff; }
 .primary-btn:hover { opacity: 0.9; }
-.primary-btn i { width: 16px; height: 16px; }
+.primary-btn svg { width: 16px; height: 16px; }
 .primary-btn:disabled, .secondary-btn:disabled, .danger-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
@@ -205,11 +205,11 @@ input, textarea, select {
 
 .secondary-btn { background: var(--surface-alt); color: var(--text); }
 .secondary-btn:hover { background: var(--border); }
-.secondary-btn i { width: 16px; height: 16px; }
+.secondary-btn svg { width: 16px; height: 16px; }
 
 .danger-btn { background: var(--danger-soft); color: var(--danger); }
 .danger-btn:hover { background: #f4d3ce; }
-.danger-btn i { width: 16px; height: 16px; }
+.danger-btn svg { width: 16px; height: 16px; }
 
 .icon-btn {
   display: inline-flex;
@@ -267,8 +267,8 @@ input, textarea, select {
   justify-content: center;
   color: var(--text-muted);
 }
-.thumb-empty i { width: 30px; height: 30px; }
-.thumb-empty.large i { width: 48px; height: 48px; }
+.thumb-empty svg { width: 30px; height: 30px; }
+.thumb-empty.large svg { width: 48px; height: 48px; }
 
 .card-title {
   padding: 12px 14px;
@@ -290,7 +290,7 @@ input, textarea, select {
   color: var(--text-muted);
   text-align: center;
 }
-.empty-state i { width: 42px; height: 42px; }
+.empty-state svg { width: 42px; height: 42px; }
 
 /* ---------- 비밀번호 입장 화면 ---------- */
 .auth-gate {
@@ -314,7 +314,7 @@ input, textarea, select {
   gap: 6px;
 }
 
-.auth-box i { width: 30px; height: 30px; color: var(--accent); margin-bottom: 6px; }
+.auth-box svg { width: 30px; height: 30px; color: var(--accent); margin-bottom: 6px; }
 .auth-box h1 { font-size: 20px; margin: 0; }
 .auth-box p { font-size: 13px; color: var(--text-muted); margin: 0 0 14px; }
 
@@ -370,7 +370,7 @@ input, textarea, select {
   background: var(--surface-alt);
 }
 .modal-close:hover { background: var(--border); }
-.modal-close i { width: 16px; height: 16px; }
+.modal-close svg { width: 16px; height: 16px; }
 
 /* ---------- 상세 보기 ---------- */
 .view-meta {
@@ -382,19 +382,24 @@ input, textarea, select {
 }
 
 #viewTitle { margin: 0 0 12px; font-size: 22px; }
-#viewContent {
+
+.view-actions { display: flex; gap: 8px; margin-bottom: 20px; }
+.view-actions button {
+  padding: 6px 12px;
+  font-size: 12.5px;
+}
+.view-actions button svg { width: 13px; height: 13px; }
+
+.view-segments {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.view-text-block {
   white-space: pre-wrap;
   line-height: 1.6;
   color: var(--text);
-  margin: 0 0 20px;
-}
-
-.view-actions { display: flex; gap: 10px; margin-bottom: 20px; }
-
-.view-gallery {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  margin: 0;
 }
 .gallery-row { display: flex; gap: 8px; }
 .gallery-row img {
@@ -461,23 +466,6 @@ input, textarea, select {
   gap: 10px;
   margin-top: 10px;
 }
-.row-break { flex-basis: 100%; height: 0; }
-
-.row-link-btn {
-  width: 22px;
-  height: 22px;
-  border-radius: 999px;
-  background: var(--surface-alt);
-  color: var(--text-muted);
-  border: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.row-link-btn i { width: 12px; height: 12px; }
-.row-link-btn:hover { border-color: var(--accent); color: var(--accent-text); }
-.row-link-btn.linked { background: var(--accent-soft); color: var(--accent-text); border-color: var(--accent); }
 
 .image-manage-cell {
   position: relative;
@@ -517,11 +505,65 @@ input, textarea, select {
   display: flex; align-items: center; justify-content: center;
 }
 .image-remove { top: 5px; right: 5px; }
-.image-remove i { width: 13px; height: 13px; }
+.image-remove svg { width: 13px; height: 13px; }
 .image-thumb-toggle { top: 5px; left: 5px; }
-.image-thumb-toggle i { width: 13px; height: 13px; }
+.image-thumb-toggle svg { width: 13px; height: 13px; }
 .image-manage-cell.selected .image-thumb-toggle { background: var(--accent); }
 .thumb-badge { font-size: 12px; font-weight: 700; }
+
+.segment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 10px;
+}
+.segment-box {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  background: var(--bg);
+}
+.segment-box-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+.segment-type-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.segment-type-label svg { width: 14px; height: 14px; }
+.segment-controls { display: flex; gap: 4px; }
+.seg-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+}
+.seg-btn:hover { background: var(--surface-alt); color: var(--text); }
+.seg-btn svg { width: 14px; height: 14px; }
+
+.segment-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  resize: vertical;
+}
+.segment-textarea:focus { outline: none; border-color: var(--accent); }
+
+.segment-add-row { display: flex; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
 
 .edit-actions {
   display: flex;
