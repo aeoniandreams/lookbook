@@ -223,7 +223,7 @@ input, textarea, select {
 /* ---------- 카드 그리드 ---------- */
 .grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 18px;
 }
 
@@ -617,6 +617,6 @@ input, textarea, select {
   }
   #sidebar.open { transform: translateX(0); }
   #main { padding: 70px 16px 50px; }
-  .grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
   .modal { padding: 20px; }
 }
