@@ -2,8 +2,10 @@
   let allBlocks = [];
   let selection = { categoryId: CATEGORIES[0].id, subcategoryId: null }; // subcategoryId null = "전체"
   let editingBlockId = null;
-  let workingImages = []; // [{id, dataUrl}]
-  let workingThumbnailIds = []; // up to 2 image ids, in order
+  let currentBlockId = null; // 저장 전에도 이미지 업로드 경로를 고정하기 위한 id
+  let workingImages = []; // [{id, file?, previewUrl, url, path}]
+  let workingThumbnailIds = []; // 최대 2개, 선택 순서 유지
+  let pendingDeletePaths = []; // 저장을 눌렀을 때 실제로 Storage에서 지울 경로들
 
   const $ = sel => document.querySelector(sel);
 
@@ -26,6 +28,7 @@
   const editContentInput = $('#editContentInput');
   const editImageInput = $('#editImageInput');
   const editImageGrid = $('#editImageGrid');
+  const editSaveBtn = $('#editSaveBtn');
 
   function icons() {
     if (window.lucide) lucide.createIcons();
@@ -120,15 +123,16 @@
   }
 
   function thumbnailHTML(block) {
+    const images = block.images || [];
     const thumbs = (block.thumbnailIds || [])
-      .map(id => block.images.find(img => img.id === id))
+      .map(id => images.find(img => img.id === id))
       .filter(Boolean);
-    const source = thumbs.length ? thumbs : (block.images.length ? [block.images[0]] : []);
+    const source = thumbs.length ? thumbs : (images.length ? [images[0]] : []);
 
     if (!source.length) {
       return `<div class="thumb-empty"><i data-lucide="image"></i></div>`;
     }
-    return source.map(img => `<div class="thumb-half"><img src="${img.dataUrl}" alt=""></div>`).join('');
+    return source.map(img => `<div class="thumb-half"><img src="${img.url}" alt="" loading="lazy"></div>`).join('');
   }
 
   function renderGrid() {
@@ -145,10 +149,11 @@
     blockGrid.classList.remove('hidden');
 
     blocks.forEach(block => {
+      const thumbCount = (block.thumbnailIds && block.thumbnailIds.length) || ((block.images || []).length ? 1 : 0);
       const card = document.createElement('article');
       card.className = 'card';
       card.innerHTML = `
-        <div class="card-thumb thumb-count-${(block.thumbnailIds && block.thumbnailIds.length) || (block.images.length ? 1 : 0)}">
+        <div class="card-thumb thumb-count-${thumbCount}">
           ${thumbnailHTML(block)}
         </div>
         <div class="card-title">${escapeHTML(block.title || '(제목 없음)')}</div>
@@ -176,8 +181,9 @@
     if (!block) return;
     viewModal.dataset.blockId = blockId;
 
-    viewGallery.innerHTML = block.images.length
-      ? block.images.map(img => `<img src="${img.dataUrl}" alt="">`).join('')
+    const images = block.images || [];
+    viewGallery.innerHTML = images.length
+      ? images.map(img => `<img src="${img.url}" alt="" loading="lazy">`).join('')
       : `<div class="thumb-empty large"><i data-lucide="image"></i></div>`;
 
     const sub = findSub(block.subcategoryId);
@@ -206,13 +212,17 @@
 
   $('#viewDeleteBtn').addEventListener('click', async () => {
     const id = viewModal.dataset.blockId;
+    const block = allBlocks.find(b => b.id === id);
+    if (!block) return;
     if (!confirm('이 카드를 삭제할까요? 되돌릴 수 없어요.')) return;
-    await DB.delete(id);
-    allBlocks = allBlocks.filter(b => b.id !== id);
-    closeViewModal();
-    renderSidebar();
-    renderMain();
-    toast('카드를 삭제했어요.');
+    try {
+      await LookbookFirebase.removeBlock(block);
+      closeViewModal();
+      toast('카드를 삭제했어요.');
+    } catch (err) {
+      console.error(err);
+      toast('삭제에 실패했어요. 다시 시도해주세요.');
+    }
   });
 
   // ---------- 추가/수정 모달 ----------
@@ -239,11 +249,15 @@
   function openEditModal(blockId) {
     const block = blockId ? allBlocks.find(b => b.id === blockId) : null;
     editingBlockId = block ? block.id : null;
+    currentBlockId = block ? block.id : uid();
+    pendingDeletePaths = [];
 
     editModalTitle.textContent = block ? '카드 수정' : '새 카드 추가';
     editTitleInput.value = block ? block.title || '' : '';
     editContentInput.value = block ? block.content || '' : '';
-    workingImages = block ? block.images.map(img => ({ ...img })) : [];
+    workingImages = block
+      ? (block.images || []).map(img => ({ id: img.id, url: img.url, path: img.path, file: null, previewUrl: null }))
+      : [];
     workingThumbnailIds = block ? [...(block.thumbnailIds || [])] : [];
 
     const defaultCat = block ? findCategoryBySub(block.subcategoryId).id : (selection.categoryId || CATEGORIES[0].id);
@@ -256,11 +270,20 @@
     icons();
   }
 
+  function revokeUnsavedPreviews() {
+    workingImages.forEach(entry => {
+      if (entry.file && entry.previewUrl) URL.revokeObjectURL(entry.previewUrl);
+    });
+  }
+
   function closeEditModal() {
+    revokeUnsavedPreviews();
     editModal.classList.add('hidden');
     editingBlockId = null;
+    currentBlockId = null;
     workingImages = [];
     workingThumbnailIds = [];
+    pendingDeletePaths = [];
   }
 
   $('[data-close-edit]').addEventListener('click', closeEditModal);
@@ -270,24 +293,14 @@
   $('#addBlockBtn').addEventListener('click', () => openEditModal(null));
   $('#emptyAddBtn').addEventListener('click', () => openEditModal(null));
 
-  editImageInput.addEventListener('change', async (e) => {
+  editImageInput.addEventListener('change', (e) => {
     const files = Array.from(e.target.files || []);
-    for (const file of files) {
-      const dataUrl = await fileToDataURL(file);
-      workingImages.push({ id: uid(), dataUrl });
-    }
+    files.forEach(file => {
+      workingImages.push({ id: uid(), file, previewUrl: URL.createObjectURL(file), url: null, path: null });
+    });
     editImageInput.value = '';
     renderImageManageGrid();
   });
-
-  function fileToDataURL(file) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
 
   function renderImageManageGrid() {
     editImageGrid.innerHTML = '';
@@ -300,14 +313,17 @@
       const cell = document.createElement('div');
       cell.className = 'image-manage-cell' + (thumbIndex > -1 ? ' selected' : '');
       cell.innerHTML = `
-        <img src="${img.dataUrl}" alt="">
+        <img src="${img.previewUrl || img.url}" alt="">
         <button type="button" class="image-remove" title="이미지 삭제"><i data-lucide="x"></i></button>
         <button type="button" class="image-thumb-toggle" title="썸네일로 선택">
           ${thumbIndex > -1 ? `<span class="thumb-badge">${thumbIndex + 1}</span>` : `<i data-lucide="star"></i>`}
         </button>
       `;
       cell.querySelector('.image-remove').addEventListener('click', () => {
-        workingImages = workingImages.filter(i => i.id !== img.id);
+        const idx = workingImages.findIndex(i => i.id === img.id);
+        const [removed] = workingImages.splice(idx, 1);
+        if (removed.path) pendingDeletePaths.push(removed.path);
+        if (removed.file && removed.previewUrl) URL.revokeObjectURL(removed.previewUrl);
         workingThumbnailIds = workingThumbnailIds.filter(id => id !== img.id);
         renderImageManageGrid();
       });
@@ -329,36 +345,67 @@
     icons();
   }
 
-  $('#editSaveBtn').addEventListener('click', async () => {
+  editSaveBtn.addEventListener('click', async () => {
     const title = editTitleInput.value.trim();
     if (!title) {
       toast('제목을 입력해주세요.');
       editTitleInput.focus();
       return;
     }
+
+    const blockId = currentBlockId;
     const subcategoryId = editSubcategorySelect.value;
-    const block = {
-      id: editingBlockId || uid(),
-      subcategoryId,
-      title,
-      content: editContentInput.value,
-      images: workingImages,
-      thumbnailIds: workingThumbnailIds,
-      updatedAt: Date.now(),
-      createdAt: editingBlockId
-        ? (allBlocks.find(b => b.id === editingBlockId)?.createdAt || Date.now())
-        : Date.now()
-    };
+    const existing = editingBlockId ? allBlocks.find(b => b.id === editingBlockId) : null;
 
-    await DB.put(block);
-    const idx = allBlocks.findIndex(b => b.id === block.id);
-    if (idx > -1) allBlocks[idx] = block; else allBlocks.push(block);
+    editSaveBtn.disabled = true;
+    editSaveBtn.textContent = '저장 중...';
 
-    selection = { categoryId: findCategoryBySub(subcategoryId).id, subcategoryId };
-    closeEditModal();
-    renderSidebar();
-    renderMain();
-    toast('저장했어요.');
+    try {
+      // 새로 추가된 이미지만 업로드
+      for (const entry of workingImages) {
+        if (entry.file) {
+          const { url, path } = await LookbookFirebase.uploadImage(blockId, entry.id, entry.file);
+          entry.url = url;
+          entry.path = path;
+          URL.revokeObjectURL(entry.previewUrl);
+          entry.file = null;
+          entry.previewUrl = null;
+        }
+      }
+
+      // 모달 안에서 제거됐던 기존 이미지는 저장 시점에 실제로 삭제
+      await Promise.all(pendingDeletePaths.map(path => LookbookFirebase.deleteImagePath(path)));
+
+      const images = workingImages.map(({ id, url, path }) => ({ id, url, path }));
+      const block = {
+        id: blockId,
+        subcategoryId,
+        title,
+        content: editContentInput.value,
+        images,
+        thumbnailIds: workingThumbnailIds.filter(id => images.some(img => img.id === id)),
+        createdAt: existing ? existing.createdAt || Date.now() : Date.now(),
+        updatedAt: Date.now()
+      };
+
+      await LookbookFirebase.saveBlock(block);
+
+      selection = { categoryId: findCategoryBySub(subcategoryId).id, subcategoryId };
+      editingBlockId = null;
+      currentBlockId = null;
+      workingImages = [];
+      workingThumbnailIds = [];
+      pendingDeletePaths = [];
+      editModal.classList.add('hidden');
+      toast('저장했어요.');
+    } catch (err) {
+      console.error(err);
+      toast('저장에 실패했어요. 네트워크를 확인해주세요.');
+    } finally {
+      editSaveBtn.disabled = false;
+      editSaveBtn.innerHTML = '<i data-lucide="check"></i> 저장';
+      icons();
+    }
   });
 
   // ---------- 모바일 사이드바 ----------
@@ -380,13 +427,13 @@
     else if (!viewModal.classList.contains('hidden')) closeViewModal();
   });
 
-  // ---------- 초기화 ----------
-  async function init() {
+  // ---------- 초기화 (Firebase 로그인 완료 후 시작) ----------
+  window.addEventListener('firebase-ready', () => {
     icons();
-    allBlocks = await DB.getAll();
-    renderSidebar();
-    renderMain();
-  }
-
-  init();
+    LookbookFirebase.subscribeBlocks(blocks => {
+      allBlocks = blocks;
+      renderSidebar();
+      renderMain();
+    });
+  });
 })();

@@ -1,3 +1,11 @@
+@font-face {
+  font-family: 'Pretendard JP Variable';
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: swap;
+  src: url('../fonts/PretendardJPVariable.woff2') format('woff2-variations');
+}
+
 :root {
   --bg: #faf7f5;
   --surface: #ffffff;
@@ -24,7 +32,8 @@ html, body {
 }
 
 body {
-  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Pretendard JP Variable', 'Apple SD Gothic Neo', 'Hiragino Sans',
+    'Malgun Gothic', -apple-system, BlinkMacSystemFont, sans-serif;
   background: var(--bg);
   color: var(--text);
 }
@@ -106,12 +115,9 @@ input, textarea, select {
 .cat-count {
   font-size: 11px;
   color: var(--text-muted);
-  background: var(--surface-alt);
-  border-radius: 999px;
-  padding: 1px 7px;
   flex-shrink: 0;
 }
-.nav-category-head.active .cat-count { background: rgba(255,255,255,0.6); }
+.nav-category-head.active .cat-count { color: var(--accent-text); }
 
 .chevron {
   width: 15px; height: 15px;
@@ -145,7 +151,7 @@ input, textarea, select {
 }
 .nav-sub-item:hover { background: var(--surface-alt); color: var(--text); }
 .nav-sub-item.active { background: var(--accent); color: #fff; font-weight: 600; }
-.nav-sub-item.active .cat-count { background: rgba(255,255,255,0.3); color: #fff; }
+.nav-sub-item.active .cat-count { color: #fff; }
 
 #main {
   padding: 24px 32px 60px;
@@ -185,6 +191,10 @@ input, textarea, select {
 .primary-btn { background: var(--accent); color: #fff; }
 .primary-btn:hover { opacity: 0.9; }
 .primary-btn i { width: 16px; height: 16px; }
+.primary-btn:disabled, .secondary-btn:disabled, .danger-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
 
 .secondary-btn { background: var(--surface-alt); color: var(--text); }
 .secondary-btn:hover { background: var(--border); }
@@ -274,6 +284,51 @@ input, textarea, select {
   text-align: center;
 }
 .empty-state i { width: 42px; height: 42px; }
+
+/* ---------- 비밀번호 입장 화면 ---------- */
+.auth-gate {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 300;
+  padding: 20px;
+}
+
+.auth-box {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 6px;
+}
+
+.auth-box i { width: 30px; height: 30px; color: var(--accent); margin-bottom: 6px; }
+.auth-box h1 { font-size: 20px; margin: 0; }
+.auth-box p { font-size: 13px; color: var(--text-muted); margin: 0 0 14px; }
+
+.auth-box input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  margin-bottom: 12px;
+  text-align: center;
+}
+.auth-box input:focus { outline: none; border-color: var(--accent); }
+
+.auth-box .primary-btn { width: 100%; justify-content: center; padding: 11px; }
+
+.auth-error {
+  color: var(--danger);
+  font-size: 12px;
+  margin-top: 10px;
+}
 
 /* ---------- 모달 공통 ---------- */
 .modal-overlay {
