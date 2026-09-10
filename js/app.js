@@ -5,6 +5,7 @@
   let currentBlockId = null;
   let workingImages = []; // [{id, url}]
   let workingThumbnailIds = []; // 최대 2개, 선택 순서 유지
+  let workingSameRow = []; // workingImages와 같은 길이. true면 바로 앞 이미지와 한 줄로 묶임
 
   const $ = sel => document.querySelector(sel);
 
@@ -36,8 +37,8 @@
 
   // lucide에 없는 아이콘을 직접 그려서 채워넣은 것 (lucide와 같은 24x24 스트로크 스타일)
   const CUSTOM_ICONS = {
-    butterfly: `<path d="M12 6c0-2.2-1.8-4-4-4-2.2 0-4 1.8-4 4 0 3 2 5 4 6-2 1-4 3-4 6 0 2.2 1.8 4 4 4 2.2 0 4-1.8 4-4"/><path d="M12 6c0-2.2 1.8-4 4-4 2.2 0 4 1.8 4 4 0 3-2 5-4 6 2 1 4 3 4 6 0 2.2-1.8 4-4 4-2.2 0-4-1.8-4-4"/><path d="M12 8v9"/>`,
-    basketball: `<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M5.2 5.2Q12 12 5.2 18.8"/><path d="M18.8 5.2Q12 12 18.8 18.8"/>`
+    butterfly: `<path d="M12 8c0-3.5-2.5-6-5.5-6C4 2 2 4 2 6.5 2 9.5 4.5 12 8 13c-3.5 1-6 3.5-6 6.5C2 22 4 22 6.5 22 9.5 22 12 19.5 12 16"/><path d="M12 8c0-3.5 2.5-6 5.5-6C20 2 22 4 22 6.5c0 3-2.5 5.5-6 6.5 3.5 1 6 3.5 6 6.5 0 2.5-2 2.5-4.5 2.5-3 0-5.5-2.5-5.5-5.5"/><path d="M12 8v8"/>`,
+    basketball: `<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M9 3.5Q12 12 9 20.5"/><path d="M15 3.5Q12 12 15 20.5"/>`
   };
 
   function iconHTML(name) {
@@ -57,6 +58,42 @@
 
   function uid() {
     return (crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now() + '-' + Math.random().toString(16).slice(2));
+  }
+
+  // 이미지 묶음 레이아웃: imageLayout은 [한 줄에 들어갈 이미지 개수, ...] 형태로 저장한다.
+  // (예: [1,2,1] = 1번째 이미지 혼자, 2~3번째 이미지 한 줄, 4번째 이미지 혼자)
+  // 편집 화면에서는 다루기 쉽게 "바로 앞 이미지와 같은 줄인지" boolean 배열로 변환해서 쓴다.
+  function layoutToSameRowFlags(images, layout) {
+    const flags = images.map(() => false);
+    if (!layout || !layout.length) return flags;
+    let idx = 0;
+    layout.forEach(size => {
+      for (let j = 0; j < size && idx < flags.length; j++, idx++) {
+        if (j > 0) flags[idx] = true;
+      }
+    });
+    return flags;
+  }
+
+  function sameRowFlagsToLayout(flags) {
+    const layout = [];
+    flags.forEach((sameAsPrev, i) => {
+      if (i === 0 || !sameAsPrev) layout.push(1);
+      else layout[layout.length - 1]++;
+    });
+    return layout;
+  }
+
+  function buildGalleryRows(images, layout) {
+    const validLayout = layout && layout.reduce((sum, n) => sum + n, 0) === images.length
+      ? layout
+      : images.map(() => 1);
+    let idx = 0;
+    return validLayout.map(size => {
+      const row = images.slice(idx, idx + size);
+      idx += size;
+      return row;
+    });
   }
 
   // ---------- 사이드바 ----------
@@ -193,9 +230,15 @@
     viewModal.dataset.blockId = blockId;
 
     const images = block.images || [];
-    viewGallery.innerHTML = images.length
-      ? images.map(img => `<img src="${img.url}" alt="" loading="lazy">`).join('')
-      : `<div class="thumb-empty large"><i data-lucide="image"></i></div>`;
+    if (!images.length) {
+      viewGallery.innerHTML = `<div class="thumb-empty large"><i data-lucide="image"></i></div>`;
+    } else {
+      const rows = buildGalleryRows(images, block.imageLayout);
+      viewGallery.innerHTML = rows.map(row => {
+        const cls = row.length > 1 ? 'gallery-row multi' : 'gallery-row single';
+        return `<div class="${cls}">${row.map(img => `<img src="${img.url}" alt="" loading="lazy">`).join('')}</div>`;
+      }).join('');
+    }
 
     const sub = findSub(block.subcategoryId);
     const cat = findCategoryBySub(block.subcategoryId);
@@ -269,6 +312,7 @@
       ? (block.images || []).map(img => ({ id: img.id, url: img.url }))
       : [];
     workingThumbnailIds = block ? [...(block.thumbnailIds || [])] : [];
+    workingSameRow = block ? layoutToSameRowFlags(workingImages, block.imageLayout) : [];
 
     const defaultCat = block ? findCategoryBySub(block.subcategoryId).id : (selection.categoryId || CATEGORIES[0].id);
     const defaultSub = block ? block.subcategoryId : (selection.subcategoryId || CATEGORIES.find(c => c.id === defaultCat).subs[0].id);
@@ -286,6 +330,7 @@
     currentBlockId = null;
     workingImages = [];
     workingThumbnailIds = [];
+    workingSameRow = [];
   }
 
   $('[data-close-edit]').addEventListener('click', closeEditModal);
@@ -299,6 +344,7 @@
     const url = editImageUrlInput.value.trim();
     if (!url) return;
     workingImages.push({ id: uid(), url });
+    workingSameRow.push(false);
     editImageUrlInput.value = '';
     renderImageManageGrid();
     editImageUrlInput.focus();
@@ -312,42 +358,76 @@
     }
   });
 
+  function buildImageCell(img, index) {
+    const thumbIndex = workingThumbnailIds.indexOf(img.id);
+    const cell = document.createElement('div');
+    cell.className = 'image-manage-cell' + (thumbIndex > -1 ? ' selected' : '');
+    cell.innerHTML = `
+      <img src="${img.url}" alt="" onerror="this.closest('.image-manage-cell').classList.add('broken')">
+      <button type="button" class="image-remove" title="이미지 삭제"><i data-lucide="x"></i></button>
+      <button type="button" class="image-thumb-toggle" title="썸네일로 선택">
+        ${thumbIndex > -1 ? `<span class="thumb-badge">${thumbIndex + 1}</span>` : `<i data-lucide="star"></i>`}
+      </button>
+    `;
+    cell.querySelector('.image-remove').addEventListener('click', () => {
+      const i = workingImages.findIndex(im => im.id === img.id);
+      if (i > -1) {
+        workingImages.splice(i, 1);
+        workingSameRow.splice(i, 1);
+      }
+      workingThumbnailIds = workingThumbnailIds.filter(id => id !== img.id);
+      renderImageManageGrid();
+    });
+    cell.querySelector('.image-thumb-toggle').addEventListener('click', () => {
+      const idx = workingThumbnailIds.indexOf(img.id);
+      if (idx > -1) {
+        workingThumbnailIds.splice(idx, 1);
+      } else {
+        if (workingThumbnailIds.length >= 2) {
+          toast('썸네일은 최대 2개까지 선택할 수 있어요.');
+          return;
+        }
+        workingThumbnailIds.push(img.id);
+      }
+      renderImageManageGrid();
+    });
+    return cell;
+  }
+
+  function buildRowLinkBtn(linked, onClick) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'row-link-btn' + (linked ? ' linked' : '');
+    btn.title = linked ? '분리하기' : '이 이미지와 나란히 배치하기';
+    btn.innerHTML = `<i data-lucide="${linked ? 'link-2' : 'link'}"></i>`;
+    btn.addEventListener('click', onClick);
+    return btn;
+  }
+
   function renderImageManageGrid() {
     editImageGrid.innerHTML = '';
     if (!workingImages.length) {
       editImageGrid.innerHTML = `<p class="hint">아직 추가된 이미지가 없어요.</p>`;
       return;
     }
-    workingImages.forEach(img => {
-      const thumbIndex = workingThumbnailIds.indexOf(img.id);
-      const cell = document.createElement('div');
-      cell.className = 'image-manage-cell' + (thumbIndex > -1 ? ' selected' : '');
-      cell.innerHTML = `
-        <img src="${img.url}" alt="" onerror="this.closest('.image-manage-cell').classList.add('broken')">
-        <button type="button" class="image-remove" title="이미지 삭제"><i data-lucide="x"></i></button>
-        <button type="button" class="image-thumb-toggle" title="썸네일로 선택">
-          ${thumbIndex > -1 ? `<span class="thumb-badge">${thumbIndex + 1}</span>` : `<i data-lucide="star"></i>`}
-        </button>
-      `;
-      cell.querySelector('.image-remove').addEventListener('click', () => {
-        workingImages = workingImages.filter(i => i.id !== img.id);
-        workingThumbnailIds = workingThumbnailIds.filter(id => id !== img.id);
-        renderImageManageGrid();
-      });
-      cell.querySelector('.image-thumb-toggle').addEventListener('click', () => {
-        const idx = workingThumbnailIds.indexOf(img.id);
-        if (idx > -1) {
-          workingThumbnailIds.splice(idx, 1);
+    workingImages.forEach((img, i) => {
+      if (i > 0) {
+        if (workingSameRow[i]) {
+          editImageGrid.appendChild(buildRowLinkBtn(true, () => {
+            workingSameRow[i] = false;
+            renderImageManageGrid();
+          }));
         } else {
-          if (workingThumbnailIds.length >= 2) {
-            toast('썸네일은 최대 2개까지 선택할 수 있어요.');
-            return;
-          }
-          workingThumbnailIds.push(img.id);
+          const rowBreak = document.createElement('div');
+          rowBreak.className = 'row-break';
+          editImageGrid.appendChild(rowBreak);
+          editImageGrid.appendChild(buildRowLinkBtn(false, () => {
+            workingSameRow[i] = true;
+            renderImageManageGrid();
+          }));
         }
-        renderImageManageGrid();
-      });
-      editImageGrid.appendChild(cell);
+      }
+      editImageGrid.appendChild(buildImageCell(img, i));
     });
     icons();
   }
@@ -374,6 +454,7 @@
         title,
         content: editContentInput.value,
         images,
+        imageLayout: sameRowFlagsToLayout(workingSameRow),
         thumbnailIds: workingThumbnailIds.filter(id => images.some(img => img.id === id)),
         createdAt: existing ? existing.createdAt || Date.now() : Date.now(),
         updatedAt: Date.now()
@@ -386,6 +467,7 @@
       currentBlockId = null;
       workingImages = [];
       workingThumbnailIds = [];
+      workingSameRow = [];
       editModal.classList.add('hidden');
       toast('저장했어요.');
     } catch (err) {
