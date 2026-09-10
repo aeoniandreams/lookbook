@@ -7,21 +7,21 @@
 }
 
 :root {
-  --bg: #faf7f5;
+  --bg: #f6f4fc;
   --surface: #ffffff;
-  --surface-alt: #f1ebe6;
-  --border: #e7dfd8;
-  --text: #2b2420;
-  --text-muted: #8a7d73;
-  --accent: #c98a6b;
-  --accent-soft: #f3e2d8;
-  --accent-text: #6b3a24;
-  --danger: #c65b4e;
-  --danger-soft: #fbe7e4;
+  --surface-alt: #ece8f9;
+  --border: #ddd6f0;
+  --text: #2e2a45;
+  --text-muted: #8b84a8;
+  --accent: #7c6cf0;
+  --accent-soft: #e7e2fc;
+  --accent-text: #4b3fb0;
+  --danger: #d1495c;
+  --danger-soft: #fae3e8;
   --radius: 14px;
   --radius-sm: 9px;
-  --shadow: 0 8px 24px rgba(60, 40, 25, 0.08);
-  --shadow-lg: 0 20px 60px rgba(30, 20, 10, 0.25);
+  --shadow: 0 8px 24px rgba(45, 35, 90, 0.1);
+  --shadow-lg: 0 20px 60px rgba(25, 20, 55, 0.28);
 }
 
 * { box-sizing: border-box; }
@@ -208,7 +208,7 @@ input, textarea, select {
 .secondary-btn svg { width: 16px; height: 16px; }
 
 .danger-btn { background: var(--danger-soft); color: var(--danger); }
-.danger-btn:hover { background: #f4d3ce; }
+.danger-btn:hover { background: #f6ccd3; }
 .danger-btn svg { width: 16px; height: 16px; }
 
 .icon-btn {
@@ -341,7 +341,7 @@ input, textarea, select {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(30, 20, 12, 0.45);
+  background: rgba(35, 30, 60, 0.45);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -500,7 +500,7 @@ input, textarea, select {
   position: absolute;
   width: 24px; height: 24px;
   border-radius: 999px;
-  background: rgba(20, 14, 10, 0.55);
+  background: rgba(35, 30, 60, 0.55);
   color: #fff;
   display: flex; align-items: center; justify-content: center;
 }
@@ -578,7 +578,7 @@ input, textarea, select {
   bottom: 26px;
   left: 50%;
   transform: translateX(-50%);
-  background: #2b2420;
+  background: var(--text);
   color: #fff;
   padding: 10px 18px;
   border-radius: 999px;
