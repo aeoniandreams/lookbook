@@ -3,7 +3,7 @@
 // 그 값을 그대로 이 자리에 붙여넣으면 됩니다.
 window.FIREBASE_CONFIG = {
   apiKey: "AIzaSyDwqT_kLLINGh1yxSTtUQoRyIdlfn8cvp4",
-  authDomain: "AIzaSyDwqT_kLLINGh1yxSTtUQoRyIdlfn8cvp4",
+  authDomain: "lookbook-a4512.firebaseapp.com",
   projectId: "lookbook-a4512",
   storageBucket: "lookbook-a4512.firebasestorage.app",
   messagingSenderId: "697597192526",
