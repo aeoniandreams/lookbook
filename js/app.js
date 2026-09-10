@@ -2,10 +2,9 @@
   let allBlocks = [];
   let selection = { categoryId: CATEGORIES[0].id, subcategoryId: null }; // subcategoryId null = "전체"
   let editingBlockId = null;
-  let currentBlockId = null; // 저장 전에도 이미지 업로드 경로를 고정하기 위한 id
-  let workingImages = []; // [{id, file?, previewUrl, url, path}]
+  let currentBlockId = null;
+  let workingImages = []; // [{id, url}]
   let workingThumbnailIds = []; // 최대 2개, 선택 순서 유지
-  let pendingDeletePaths = []; // 저장을 눌렀을 때 실제로 Storage에서 지울 경로들
 
   const $ = sel => document.querySelector(sel);
 
@@ -26,7 +25,8 @@
   const editSubcategorySelect = $('#editSubcategorySelect');
   const editTitleInput = $('#editTitleInput');
   const editContentInput = $('#editContentInput');
-  const editImageInput = $('#editImageInput');
+  const editImageUrlInput = $('#editImageUrlInput');
+  const editImageUrlAddBtn = $('#editImageUrlAddBtn');
   const editImageGrid = $('#editImageGrid');
   const editSaveBtn = $('#editSaveBtn');
 
@@ -250,13 +250,12 @@
     const block = blockId ? allBlocks.find(b => b.id === blockId) : null;
     editingBlockId = block ? block.id : null;
     currentBlockId = block ? block.id : uid();
-    pendingDeletePaths = [];
 
     editModalTitle.textContent = block ? '카드 수정' : '새 카드 추가';
     editTitleInput.value = block ? block.title || '' : '';
     editContentInput.value = block ? block.content || '' : '';
     workingImages = block
-      ? (block.images || []).map(img => ({ id: img.id, url: img.url, path: img.path, file: null, previewUrl: null }))
+      ? (block.images || []).map(img => ({ id: img.id, url: img.url }))
       : [];
     workingThumbnailIds = block ? [...(block.thumbnailIds || [])] : [];
 
@@ -265,25 +264,17 @@
     populateCategorySelects(defaultCat, defaultSub);
 
     renderImageManageGrid();
-    editImageInput.value = '';
+    editImageUrlInput.value = '';
     editModal.classList.remove('hidden');
     icons();
   }
 
-  function revokeUnsavedPreviews() {
-    workingImages.forEach(entry => {
-      if (entry.file && entry.previewUrl) URL.revokeObjectURL(entry.previewUrl);
-    });
-  }
-
   function closeEditModal() {
-    revokeUnsavedPreviews();
     editModal.classList.add('hidden');
     editingBlockId = null;
     currentBlockId = null;
     workingImages = [];
     workingThumbnailIds = [];
-    pendingDeletePaths = [];
   }
 
   $('[data-close-edit]').addEventListener('click', closeEditModal);
@@ -293,13 +284,21 @@
   $('#addBlockBtn').addEventListener('click', () => openEditModal(null));
   $('#emptyAddBtn').addEventListener('click', () => openEditModal(null));
 
-  editImageInput.addEventListener('change', (e) => {
-    const files = Array.from(e.target.files || []);
-    files.forEach(file => {
-      workingImages.push({ id: uid(), file, previewUrl: URL.createObjectURL(file), url: null, path: null });
-    });
-    editImageInput.value = '';
+  function addImageUrl() {
+    const url = editImageUrlInput.value.trim();
+    if (!url) return;
+    workingImages.push({ id: uid(), url });
+    editImageUrlInput.value = '';
     renderImageManageGrid();
+    editImageUrlInput.focus();
+  }
+
+  editImageUrlAddBtn.addEventListener('click', addImageUrl);
+  editImageUrlInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      addImageUrl();
+    }
   });
 
   function renderImageManageGrid() {
@@ -313,17 +312,14 @@
       const cell = document.createElement('div');
       cell.className = 'image-manage-cell' + (thumbIndex > -1 ? ' selected' : '');
       cell.innerHTML = `
-        <img src="${img.previewUrl || img.url}" alt="">
+        <img src="${img.url}" alt="" onerror="this.closest('.image-manage-cell').classList.add('broken')">
         <button type="button" class="image-remove" title="이미지 삭제"><i data-lucide="x"></i></button>
         <button type="button" class="image-thumb-toggle" title="썸네일로 선택">
           ${thumbIndex > -1 ? `<span class="thumb-badge">${thumbIndex + 1}</span>` : `<i data-lucide="star"></i>`}
         </button>
       `;
       cell.querySelector('.image-remove').addEventListener('click', () => {
-        const idx = workingImages.findIndex(i => i.id === img.id);
-        const [removed] = workingImages.splice(idx, 1);
-        if (removed.path) pendingDeletePaths.push(removed.path);
-        if (removed.file && removed.previewUrl) URL.revokeObjectURL(removed.previewUrl);
+        workingImages = workingImages.filter(i => i.id !== img.id);
         workingThumbnailIds = workingThumbnailIds.filter(id => id !== img.id);
         renderImageManageGrid();
       });
@@ -358,25 +354,9 @@
     const existing = editingBlockId ? allBlocks.find(b => b.id === editingBlockId) : null;
 
     editSaveBtn.disabled = true;
-    editSaveBtn.textContent = '저장 중...';
 
     try {
-      // 새로 추가된 이미지만 업로드
-      for (const entry of workingImages) {
-        if (entry.file) {
-          const { url, path } = await LookbookFirebase.uploadImage(blockId, entry.id, entry.file);
-          entry.url = url;
-          entry.path = path;
-          URL.revokeObjectURL(entry.previewUrl);
-          entry.file = null;
-          entry.previewUrl = null;
-        }
-      }
-
-      // 모달 안에서 제거됐던 기존 이미지는 저장 시점에 실제로 삭제
-      await Promise.all(pendingDeletePaths.map(path => LookbookFirebase.deleteImagePath(path)));
-
-      const images = workingImages.map(({ id, url, path }) => ({ id, url, path }));
+      const images = workingImages.map(({ id, url }) => ({ id, url }));
       const block = {
         id: blockId,
         subcategoryId,
@@ -395,7 +375,6 @@
       currentBlockId = null;
       workingImages = [];
       workingThumbnailIds = [];
-      pendingDeletePaths = [];
       editModal.classList.add('hidden');
       toast('저장했어요.');
     } catch (err) {
@@ -403,8 +382,6 @@
       toast('저장에 실패했어요. 네트워크를 확인해주세요.');
     } finally {
       editSaveBtn.disabled = false;
-      editSaveBtn.innerHTML = '<i data-lucide="check"></i> 저장';
-      icons();
     }
   });
 

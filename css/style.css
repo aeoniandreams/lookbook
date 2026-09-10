@@ -424,21 +424,19 @@ input, textarea, select {
   border-color: var(--accent);
 }
 
-.file-drop {
+.image-url-row {
   display: flex;
-  align-items: center;
-  justify-content: center;
   gap: 8px;
-  border: 1.5px dashed var(--border);
-  border-radius: var(--radius-sm);
-  padding: 18px;
-  color: var(--text-muted);
-  font-size: 13px;
-  cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
 }
-.file-drop:hover { border-color: var(--accent); color: var(--accent-text); }
-.file-drop i { width: 18px; height: 18px; }
+.image-url-row input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+}
+.image-url-row input:focus { outline: none; border-color: var(--accent); }
+.image-url-row .secondary-btn { flex-shrink: 0; }
 
 .hint { font-size: 12px; color: var(--text-muted); margin: 8px 0 0; }
 
@@ -461,6 +459,19 @@ input, textarea, select {
 .image-manage-cell img {
   width: 100%; height: 100%;
   object-fit: cover;
+}
+.image-manage-cell.broken img { visibility: hidden; }
+.image-manage-cell.broken::before {
+  content: '이미지를 불러올 수 없어요';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--text-muted);
 }
 
 .image-remove, .image-thumb-toggle {
