@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lookbook · 페어 의상 갤러리</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app">
+  <button id="sidebarToggle" class="icon-btn mobile-only" aria-label="메뉴 열기">
+    <i data-lucide="menu"></i>
+  </button>
+
+  <aside id="sidebar">
+    <div class="sidebar-header">
+      <i data-lucide="sparkles" class="brand-icon"></i>
+      <span class="brand-name">Lookbook</span>
+    </div>
+    <nav id="categoryNav"></nav>
+  </aside>
+
+  <div id="sidebarScrim" class="hidden"></div>
+
+  <main id="main">
+    <header id="contentHeader">
+      <div class="breadcrumb" id="breadcrumb"></div>
+      <button id="addBlockBtn" class="primary-btn">
+        <i data-lucide="plus"></i> 카드 추가
+      </button>
+    </header>
+
+    <section id="blockGrid" class="grid"></section>
+
+    <div id="emptyState" class="empty-state hidden">
+      <i data-lucide="image-plus"></i>
+      <p>아직 등록된 카드가 없어요.</p>
+      <button id="emptyAddBtn" class="primary-btn">
+        <i data-lucide="plus"></i> 첫 카드 추가하기
+      </button>
+    </div>
+  </main>
+</div>
+
+<!-- 카드 상세 보기 모달 -->
+<div id="viewModal" class="modal-overlay hidden">
+  <div class="modal view-modal">
+    <button class="modal-close" data-close-view><i data-lucide="x"></i></button>
+    <div class="view-gallery" id="viewGallery"></div>
+    <div class="view-body">
+      <div class="view-meta" id="viewMeta"></div>
+      <h2 id="viewTitle"></h2>
+      <p id="viewContent"></p>
+      <div class="view-actions">
+        <button id="viewEditBtn" class="secondary-btn"><i data-lucide="pencil"></i> 수정</button>
+        <button id="viewDeleteBtn" class="danger-btn"><i data-lucide="trash-2"></i> 삭제</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 카드 추가/수정 모달 -->
+<div id="editModal" class="modal-overlay hidden">
+  <div class="modal edit-modal">
+    <button class="modal-close" data-close-edit><i data-lucide="x"></i></button>
+    <h2 id="editModalTitle">새 카드 추가</h2>
+
+    <div class="field-row">
+      <div class="field">
+        <label>1차 카테고리</label>
+        <select id="editCategorySelect"></select>
+      </div>
+      <div class="field">
+        <label>2차 카테고리</label>
+        <select id="editSubcategorySelect"></select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>제목</label>
+      <input type="text" id="editTitleInput" placeholder="카드 제목을 입력하세요" maxlength="100">
+    </div>
+
+    <div class="field">
+      <label>이미지</label>
+      <label for="editImageInput" class="file-drop">
+        <i data-lucide="upload"></i>
+        <span>기기에서 이미지 선택 (여러 장 가능)</span>
+      </label>
+      <input type="file" id="editImageInput" accept="image/*" multiple hidden>
+      <p class="hint">썸네일로 쓸 이미지를 최대 2개까지 클릭해서 선택하세요. (선택 순서대로 좌/우 배치)</p>
+      <div id="editImageGrid" class="image-manage-grid"></div>
+    </div>
+
+    <div class="field">
+      <label>내용</label>
+      <textarea id="editContentInput" rows="6" placeholder="설정, 메모, 디자인 노트 등을 자유롭게 적어주세요"></textarea>
+    </div>
+
+    <div class="edit-actions">
+      <button id="editCancelBtn" class="secondary-btn">취소</button>
+      <button id="editSaveBtn" class="primary-btn"><i data-lucide="check"></i> 저장</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+
+<script src="js/vendor/lucide.min.js"></script>
+<script src="js/db.js"></script>
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
