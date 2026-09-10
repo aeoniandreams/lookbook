@@ -4,7 +4,7 @@ const CATEGORIES = [
   {
     id: 'jung-yun',
     name: '中ゆん',
-    icons: ['wine', 'coffee'],
+    icon: 'ferris-wheel',
     subs: [
       { id: 'jung-yun-jakjung', name: '작중' },
       { id: 'jung-yun-planning', name: '기획 일러스트' },
@@ -14,7 +14,7 @@ const CATEGORIES = [
   {
     id: 'hyun-gaeul',
     name: '현가을',
-    icons: ['rose', 'flower'],
+    icon: 'mail',
     subs: [
       { id: 'hyun-gaeul-jakjung', name: '작중' },
       { id: 'hyun-gaeul-illust', name: '일러스트' }
@@ -23,7 +23,7 @@ const CATEGORIES = [
   {
     id: 'yeongseok',
     name: '影夕',
-    icons: ['chess-king', 'sparkles'],
+    icon: 'volleyball',
     subs: [
       { id: 'yeongseok-jakjung', name: '작중' },
       { id: 'yeongseok-illust', name: '일러스트' },
@@ -33,7 +33,7 @@ const CATEGORIES = [
   {
     id: 'ghimer',
     name: 'GhiMer',
-    icons: ['ghost', 'waves-horizontal'],
+    icon: 'butterfly', // lucide에 없어서 직접 그린 커스텀 아이콘 (app.js의 CUSTOM_ICONS 참고)
     subs: [
       { id: 'ghimer-part1', name: '전편' },
       { id: 'ghimer-part2', name: '후편' },
@@ -43,7 +43,7 @@ const CATEGORIES = [
   {
     id: 'sirene',
     name: 'Sirené',
-    icons: ['venetian-mask', 'astroid'],
+    icon: 'star',
     subs: [
       { id: 'sirene-main', name: '메인 스토리' },
       { id: 'sirene-event', name: '이벤트' },
@@ -53,7 +53,7 @@ const CATEGORIES = [
   {
     id: 'samryeon',
     name: '三蓮 / 대만하리',
-    icons: ['flame', 'bird'],
+    icon: 'basketball', // lucide에 없어서 직접 그린 커스텀 아이콘 (app.js의 CUSTOM_ICONS 참고)
     subs: [
       { id: 'samryeon-jakjung', name: '작중' },
       { id: 'samryeon-special', name: 'Special' }

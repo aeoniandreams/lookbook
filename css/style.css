@@ -102,13 +102,12 @@ input, textarea, select {
 .nav-category-head:hover { background: var(--surface-alt); }
 .nav-category-head.active { background: var(--accent-soft); color: var(--accent-text); }
 
-.cat-icons {
+.cat-icon {
   display: flex;
   align-items: center;
   flex-shrink: 0;
 }
-.cat-icons i { width: 16px; height: 16px; }
-.cat-icons i:last-child { margin-left: -4px; }
+.cat-icon i, .cat-icon .custom-icon { width: 16px; height: 16px; }
 
 .cat-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

@@ -34,6 +34,19 @@
     if (window.lucide) lucide.createIcons();
   }
 
+  // lucide에 없는 아이콘을 직접 그려서 채워넣은 것 (lucide와 같은 24x24 스트로크 스타일)
+  const CUSTOM_ICONS = {
+    butterfly: `<path d="M12 6c0-2.2-1.8-4-4-4-2.2 0-4 1.8-4 4 0 3 2 5 4 6-2 1-4 3-4 6 0 2.2 1.8 4 4 4 2.2 0 4-1.8 4-4"/><path d="M12 6c0-2.2 1.8-4 4-4 2.2 0 4 1.8 4 4 0 3-2 5-4 6 2 1 4 3 4 6 0 2.2-1.8 4-4 4-2.2 0-4-1.8-4-4"/><path d="M12 8v9"/>`,
+    basketball: `<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M5.2 5.2Q12 12 5.2 18.8"/><path d="M18.8 5.2Q12 12 18.8 18.8"/>`
+  };
+
+  function iconHTML(name) {
+    if (CUSTOM_ICONS[name]) {
+      return `<svg class="custom-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${CUSTOM_ICONS[name]}</svg>`;
+    }
+    return `<i data-lucide="${name}"></i>`;
+  }
+
   function toast(msg) {
     const el = $('#toast');
     el.textContent = msg;
@@ -59,9 +72,7 @@
       const head = document.createElement('button');
       head.className = 'nav-category-head' + (isOpenCat && !selection.subcategoryId ? ' active' : '');
       head.innerHTML = `
-        <span class="cat-icons">
-          <i data-lucide="${cat.icons[0]}"></i><i data-lucide="${cat.icons[1]}"></i>
-        </span>
+        <span class="cat-icon">${iconHTML(cat.icon)}</span>
         <span class="cat-name">${cat.name}</span>
         <span class="cat-count">${count}</span>
         <i data-lucide="chevron-down" class="chevron"></i>
