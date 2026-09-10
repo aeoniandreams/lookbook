@@ -34,8 +34,8 @@
 
   // lucide에 없는 아이콘을 직접 그려서 채워넣은 것 (lucide와 같은 24x24 스트로크 스타일)
   const CUSTOM_ICONS = {
-    butterfly: `<path d="M12 5Q16.5 3 19 1.5Q21.5 3 22 8Q22.3 11.5 16 13.5"/><path d="M12 5Q7.5 3 5 1.5Q2.5 3 2 8Q1.7 11.5 8 13.5"/><path d="M8 13.5C5 14 3 15.8 3 18C3 19.8 4.5 21 6.5 21C9.3 21 11.3 18.7 12 16"/><path d="M16 13.5C19 14 21 15.8 21 18C21 19.8 19.5 21 17.5 21C14.7 21 12.7 18.7 12 16"/>`,
-    basketball: `<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2v20"/><path d="M7 5Q12 12 7 19"/><path d="M17 5Q12 12 17 19"/>`
+    butterfly: `<path d="M12 9C15.5 4.5 19 1.5 21 2.5C23 3.5 23.5 6.5 23 10C22.6 12.5 19.5 14 15.5 13.8"/><path d="M12 9C8.5 4.5 5 1.5 3 2.5C1 3.5 .5 6.5 1 10C1.4 12.5 4.5 14 8.5 13.8"/><path d="M8.5 13.8C5.3 14.3 3 16 3 18C3 19.8 4.5 21 6.5 21C9.3 21 11.3 18.7 12 16"/><path d="M15.5 13.8C18.7 14.3 21 16 21 18C21 19.8 19.5 21 17.5 21C14.7 21 12.7 18.7 12 16"/>`,
+    basketball: `<defs><clipPath id="bballClip"><circle cx="12" cy="12" r="10"/></clipPath></defs><circle cx="12" cy="12" r="10"/><g clip-path="url(#bballClip)"><path d="M2 12h20"/><path d="M12 2v20"/><path d="M3 4Q12 12 3 20"/><path d="M21 4Q12 12 21 20"/></g>`
   };
 
   function iconHTML(name) {
