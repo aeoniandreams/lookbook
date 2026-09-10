@@ -1,22 +1,22 @@
 // Firebase 연동 + 비밀번호 입장 화면 제어.
-// 이 파일은 <script type="module">로 로드되어 공식 Firebase CDN(gstatic.com)에서
-// 직접 모듈을 가져옵니다. 별도의 빌드 도구 없이 정적 사이트에서 쓰는 표준 방식입니다.
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+// 외부 CDN(gstatic.com)이 특정 네트워크/확장 프로그램에서 차단되거나 404가
+// 나는 경우가 있어서, Firebase SDK(app+auth+firestore)를 esbuild로 한 파일로
+// 묶어 js/vendor/firebase-bundle.js에 직접 포함시켰습니다. 외부 요청 없이
+// 저장소 안의 파일만으로 동작합니다.
 import {
+  initializeApp,
   getAuth,
   signInWithEmailAndPassword,
   onAuthStateChanged,
   setPersistence,
-  browserLocalPersistence
-} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
-import {
+  browserLocalPersistence,
   getFirestore,
   collection,
   doc,
   setDoc,
   deleteDoc,
   onSnapshot
-} from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+} from "./vendor/firebase-bundle.js";
 
 const AUTH_EMAIL = window.FIREBASE_AUTH_EMAIL;
 const BLOCKS_COLLECTION = "blocks";
