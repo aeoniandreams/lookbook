@@ -34,8 +34,8 @@
 
   // lucide에 없는 아이콘을 직접 그려서 채워넣은 것 (lucide와 같은 24x24 스트로크 스타일)
   const CUSTOM_ICONS = {
-    butterfly: `<path d="M12 7.5c0-2.6-2.1-4.7-4.7-4.7C4.9 2.8 3 4.6 3 7c0 3.3 2.3 5.7 4.7 6.8-1.3.7-2.5 2-2.5 3.9 0 1.5 1.2 2.7 2.7 2.7"/><path d="M12 7.5c0-2.6 2.1-4.7 4.7-4.7 2.4 0 4.3 1.8 4.3 4.2 0 3.3-2.3 5.7-4.7 6.8 1.3.7 2.5 2 2.5 3.9 0 1.5-1.2 2.7-2.7 2.7"/>`,
-    basketball: `<circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2v20"/><path d="M6 3.5Q12 12 6 20.5"/><path d="M18 3.5Q12 12 18 20.5"/>`
+    butterfly: `<path d="M12 9C17 7 22 9.5 20.5 13C19.2 16 14.5 16.8 13.3 14.5C12.8 13.5 13.8 12.7 14.7 13.3C15.4 13.75 15 14.6 14.1 14.5"/><path d="M12 9C7 7 2 9.5 3.5 13C4.8 16 9.5 16.8 10.7 14.5C11.2 13.5 10.2 12.7 9.3 13.3C8.6 13.75 9 14.6 9.9 14.5"/><path d="M12 9C11.4 7.8 10.5 7.2 10 7.7"/><path d="M12 9C12.6 7.8 13.5 7.2 14 7.7"/><path d="M14.1 14.5C13.2 16.7 10.8 16.7 9.9 14.5"/>`,
+    basketball: `<circle cx="12" cy="12" r="10"/><path d="M4 12h16"/><path d="M12 4v16"/><path d="M5 3.5Q12 12 5 20.5"/><path d="M19 3.5Q12 12 19 20.5"/>`
   };
 
   function iconHTML(name) {
@@ -132,6 +132,7 @@
           selection = { categoryId: cat.id, subcategoryId: sub.id };
           renderSidebar();
           renderMain();
+          closeMobileSidebar();
         });
         subList.appendChild(subBtn);
       });
@@ -527,10 +528,12 @@
     sidebar.classList.add('open');
     sidebarScrim.classList.remove('hidden');
   });
-  sidebarScrim.addEventListener('click', () => {
+  sidebarScrim.addEventListener('click', () => closeMobileSidebar());
+
+  function closeMobileSidebar() {
     sidebar.classList.remove('open');
     sidebarScrim.classList.add('hidden');
-  });
+  }
 
   // 키보드로 모달 닫기
   document.addEventListener('keydown', (e) => {
