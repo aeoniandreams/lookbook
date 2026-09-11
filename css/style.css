@@ -7,9 +7,9 @@
 }
 
 :root {
-  --bg: #f6f4fc;
+  --bg: var(--surface);
   --surface: #ffffff;
-  --surface-alt: #ece8f9;
+  --surface-alt: #f6f4fc;
   --border: #ddd6f0;
   --text: #2e2a45;
   --text-muted: #8b84a8;
