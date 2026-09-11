@@ -113,7 +113,7 @@ input, textarea, select {
 }
 .sidebar-logout-btn svg { width: 16px; height: 16px; }
 .sidebar-logout-btn:hover { color: var(--danger); }
-.sidebar-admin-badge { color: var(--accent); font-weight: 600; }
+.sidebar-admin-badge { color: var(--text-muted); font-weight: 600; }
 
 .nav-category-head {
   width: 100%;
