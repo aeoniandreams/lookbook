@@ -12,7 +12,10 @@
   const blockGrid = $('#blockGrid');
   const emptyState = $('#emptyState');
   const breadcrumb = $('#breadcrumb');
-  const sortSelect = $('#sortSelect');
+  const sortDropdown = $('#sortDropdown');
+  const sortDropdownBtn = $('#sortDropdownBtn');
+  const sortDropdownLabel = $('#sortDropdownLabel');
+  const sortDropdownMenu = $('#sortDropdownMenu');
   let sortOrder = 'alpha';
 
   const viewModal = $('#viewModal');
@@ -401,9 +404,35 @@
     renderGrid();
   }
 
-  sortSelect.addEventListener('change', () => {
-    sortOrder = sortSelect.value;
-    renderGrid();
+  sortDropdownBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const willOpen = sortDropdownMenu.classList.contains('hidden');
+    sortDropdownMenu.classList.toggle('hidden', !willOpen);
+    sortDropdown.classList.toggle('open', willOpen);
+    sortDropdownBtn.setAttribute('aria-expanded', String(willOpen));
+  });
+
+  function closeSortDropdown() {
+    sortDropdownMenu.classList.add('hidden');
+    sortDropdown.classList.remove('open');
+    sortDropdownBtn.setAttribute('aria-expanded', 'false');
+  }
+
+  sortDropdownMenu.querySelectorAll('.sort-dropdown-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      sortOrder = opt.dataset.value;
+      sortDropdownLabel.textContent = opt.textContent;
+      sortDropdownMenu.querySelectorAll('.sort-dropdown-option').forEach(o => {
+        o.classList.toggle('active', o === opt);
+        o.setAttribute('aria-selected', String(o === opt));
+      });
+      closeSortDropdown();
+      renderGrid();
+    });
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!sortDropdown.contains(e.target)) closeSortDropdown();
   });
 
   // ---------- 상세 보기 모달 ----------
