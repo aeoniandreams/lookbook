@@ -592,9 +592,46 @@
     </div>`;
   }
 
+  // CSS의 grid-auto-rows/gap 값과 맞춰야 한다.
+  const HOME_GRID_ROW_UNIT = 4;
+  const HOME_GRID_GAP = 6;
+
+  // 가로가 긴 이미지는 2칸을 차지하게(.home-wide) 하고, 각 항목의 세로
+  // 칸수(grid-row-end span)는 실제 렌더링된 너비와 이미지 원본 비율로 계산해
+  // 넣는다. CSS columns와 달리 grid는 칸을 걸쳐 차지하는 배치가 가능해서
+  // "가로가 긴 이미지는 넓게, 그래서 세로가 긴 이미지와 비슷한 크기감"을
+  // 낼 수 있는데, 그 대신 행 높이를 이렇게 직접 계산해줘야 한다.
+  function layoutHomeMasonry() {
+    homeMasonry.querySelectorAll('.reference-item').forEach(item => {
+      const img = item.querySelector('img');
+      if (!img || !img.naturalWidth || !img.naturalHeight) return;
+      item.classList.toggle('home-wide', img.naturalWidth > img.naturalHeight);
+      const renderedWidth = item.getBoundingClientRect().width;
+      if (!renderedWidth) return;
+      const renderedHeight = renderedWidth * (img.naturalHeight / img.naturalWidth);
+      const rowSpan = Math.ceil((renderedHeight + HOME_GRID_GAP) / (HOME_GRID_ROW_UNIT + HOME_GRID_GAP));
+      item.style.gridRowEnd = `span ${rowSpan}`;
+    });
+  }
+
+  let homeMasonryResizeTimer = null;
+  window.addEventListener('resize', () => {
+    if (homeView.classList.contains('hidden')) return;
+    clearTimeout(homeMasonryResizeTimer);
+    homeMasonryResizeTimer = setTimeout(layoutHomeMasonry, 150);
+  });
+
   function renderHomeView() {
     homeMasonry.innerHTML = homeImages.map(homeItemViewHTML).join('');
     icons();
+    homeMasonry.querySelectorAll('img').forEach(img => {
+      if (img.complete && img.naturalWidth) {
+        layoutHomeMasonry();
+      } else {
+        img.addEventListener('load', layoutHomeMasonry);
+        img.addEventListener('error', layoutHomeMasonry);
+      }
+    });
   }
 
   homeMasonry.addEventListener('click', (e) => {
