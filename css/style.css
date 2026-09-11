@@ -7,9 +7,9 @@
 }
 
 :root {
-  --bg: var(--surface);
+  --bg: #f6f4fc;
   --surface: #ffffff;
-  --surface-alt: #f6f4fc;
+  --surface-alt: #ece8f9;
   --border: #ddd6f0;
   --text: #2e2a45;
   --text-muted: #8b84a8;
@@ -248,7 +248,7 @@ input, textarea, select {
   color: var(--text);
   cursor: pointer;
 }
-.dropdown-option:hover { background: var(--surface-alt); }
+.dropdown-option:hover { background: var(--accent-soft); }
 .dropdown-option.active { background: var(--accent); color: #fff; font-weight: 600; }
 
 /* 카드 수정란의 카테고리/2차 카테고리 선택: 정렬 드롭다운과 같은
@@ -282,7 +282,7 @@ input, textarea, select {
   flex-shrink: 0;
 }
 
-.secondary-btn { color: var(--text); }
+.secondary-btn { background: var(--surface-alt); color: var(--text); }
 .secondary-btn:hover { background: var(--border); }
 .secondary-btn svg { width: 16px; height: 16px; }
 
@@ -297,7 +297,7 @@ input, textarea, select {
   width: 36px; height: 36px;
   border-radius: 999px;
 }
-.icon-btn:hover { background: #ece8f9; }
+.icon-btn:hover { background: var(--surface-alt); }
 
 /* ---------- 카드 그리드 ---------- */
 .grid {
@@ -726,7 +726,7 @@ input, textarea, select {
   padding: 7px 10px;
   border: 1px solid var(--border);
   border-radius: 7px;
-  background: var(--surface-alt);
+  background: var(--bg);
   font-size: 13px;
 }
 .reference-manage-fields input:focus { outline: none; border-color: var(--accent); }
@@ -738,7 +738,7 @@ input, textarea, select {
   padding: 7px 10px;
   border: 1px solid var(--border);
   border-radius: 7px;
-  background: var(--surface-alt);
+  background: var(--bg);
   font-size: 13px;
   line-height: 1.4;
 }
@@ -814,7 +814,7 @@ input, textarea, select {
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface-alt);
+  background: var(--bg);
 }
 .field textarea { resize: vertical; }
 .field input:focus, .field textarea:focus, .field select:focus {
@@ -831,7 +831,7 @@ input, textarea, select {
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface-alt);
+  background: var(--bg);
 }
 .image-url-row input:focus { outline: none; border-color: var(--accent); }
 .image-url-row .secondary-btn { flex-shrink: 0; }
@@ -900,7 +900,7 @@ input, textarea, select {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 12px;
-  background: var(--surface-alt);
+  background: var(--bg);
 }
 .segment-box-header {
   display: flex;
@@ -929,7 +929,7 @@ input, textarea, select {
   border-radius: var(--radius-sm);
   color: var(--text-muted);
 }
-.seg-btn:hover { background: #ece8f9; color: var(--text); }
+.seg-btn:hover { background: var(--surface-alt); color: var(--text); }
 .seg-btn svg { width: 14px; height: 14px; }
 
 .segment-drag-handle {
