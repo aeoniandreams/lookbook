@@ -63,6 +63,79 @@
     return div.innerHTML;
   }
 
+  // ---------- 텍스트 박스 서식(굵게/기울임/취소선/색/아이콘/토글) ----------
+  // 저장은 항상 이 가벼운 마크업 문법의 순수 텍스트로 한다 (contenteditable
+  // 없이 textarea + 툴바 버튼으로 마크업을 삽입/제거하는 방식).
+  //   **굵게**  *기울임*  ~~취소선~~
+  //   [gray]..[/gray] [accent]..[/accent] [red]..[/red]
+  //   [icon:아이콘이름]
+  //   [toggle:제목]\n내용\n[/toggle]
+  const RICH_TEXT_ICONS = CATEGORIES.map(c => c.icon);
+
+  function renderInlineMarkup(escapedText) {
+    let html = escapedText;
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
+    html = html.replace(/\[gray\](.+?)\[\/gray\]/g, '<span class="rt-gray">$1</span>');
+    html = html.replace(/\[accent\](.+?)\[\/accent\]/g, '<span class="rt-accent">$1</span>');
+    html = html.replace(/\[red\](.+?)\[\/red\]/g, '<span class="rt-red">$1</span>');
+    html = html.replace(/\[icon:([a-z0-9-]+)\]/g, (m, name) =>
+      `<span class="rt-icon">${iconHTML(name)}</span>`);
+    return html;
+  }
+
+  function renderRichText(rawText) {
+    const escaped = escapeHTML(rawText || '');
+    const toggles = [];
+    let working = escaped.replace(/\[toggle:(.*?)\]\n?([\s\S]*?)\[\/toggle\]/g, (match, title, body) => {
+      const idx = toggles.length;
+      const titleHTML = renderInlineMarkup(title.trim());
+      const bodyHTML = renderInlineMarkup(body.trim()).replace(/\n/g, '<br>');
+      toggles.push(
+        `<div class="text-toggle">` +
+          `<button type="button" class="text-toggle-header">` +
+            `<i data-lucide="chevron-right" class="toggle-chevron toggle-chevron-closed"></i>` +
+            `<i data-lucide="chevron-down" class="toggle-chevron toggle-chevron-open"></i>` +
+            `<span>${titleHTML}</span>` +
+          `</button>` +
+          `<div class="toggle-body" hidden>${bodyHTML}</div>` +
+        `</div>`
+      );
+      return ` TOGGLE${idx} `;
+    });
+    working = renderInlineMarkup(working);
+    working = working.replace(/\n/g, '<br>');
+    working = working.replace(/ TOGGLE(\d+) /g, (m, i) => toggles[Number(i)]);
+    return working;
+  }
+
+  function wrapSelection(textarea, before, after = before) {
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const value = textarea.value;
+    const selected = value.slice(start, end);
+    textarea.value = value.slice(0, start) + before + selected + after + value.slice(end);
+    textarea.focus();
+    if (selected) {
+      textarea.selectionStart = start + before.length;
+      textarea.selectionEnd = start + before.length + selected.length;
+    } else {
+      textarea.selectionStart = textarea.selectionEnd = start + before.length;
+    }
+    textarea.dispatchEvent(new Event('input'));
+  }
+
+  function insertAtCursor(textarea, text) {
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const value = textarea.value;
+    textarea.value = value.slice(0, start) + text + value.slice(end);
+    textarea.selectionStart = textarea.selectionEnd = start + text.length;
+    textarea.focus();
+    textarea.dispatchEvent(new Event('input'));
+  }
+
   // ---------- 옛 데이터 형식(content + images + imageLayout) 호환 ----------
   // 예전에 저장된 카드는 segments 필드가 없다. 화면에 쓸 때만 즉석으로
   // segments 배열로 변환해서 다룬다 (저장은 항상 새 형식으로 한다).
@@ -152,11 +225,14 @@
   function visibleBlocks() {
     const cat = currentCategory();
     if (!cat) return [];
+    let blocks;
     if (selection.subcategoryId) {
-      return allBlocks.filter(b => b.subcategoryId === selection.subcategoryId);
+      blocks = allBlocks.filter(b => b.subcategoryId === selection.subcategoryId);
+    } else {
+      const subIds = cat.subs.map(s => s.id);
+      blocks = allBlocks.filter(b => subIds.includes(b.subcategoryId));
     }
-    const subIds = cat.subs.map(s => s.id);
-    return allBlocks.filter(b => subIds.includes(b.subcategoryId));
+    return blocks.slice().sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ko'));
   }
 
   function renderBreadcrumb() {
@@ -221,7 +297,7 @@
   // ---------- 상세 보기 모달 ----------
   function segmentViewHTML(seg) {
     if (seg.type === 'text') {
-      return `<p class="view-text-block">${escapeHTML(seg.text || '')}</p>`;
+      return `<div class="view-text-block">${renderRichText(seg.text || '')}</div>`;
     }
     const cls = seg.images.length > 1 ? 'gallery-row multi' : 'gallery-row single';
     return `<div class="${cls}">${seg.images.map(img => `<img src="${img.url}" alt="" loading="lazy">`).join('')}</div>`;
@@ -250,7 +326,16 @@
   }
 
   $('[data-close-view]').addEventListener('click', closeViewModal);
-  viewModal.addEventListener('click', e => { if (e.target === viewModal) closeViewModal(); });
+  viewModal.addEventListener('click', e => {
+    if (e.target === viewModal) { closeViewModal(); return; }
+    const header = e.target.closest('.text-toggle-header');
+    if (header) {
+      const wrap = header.closest('.text-toggle');
+      const body = wrap.querySelector('.toggle-body');
+      wrap.classList.toggle('open');
+      body.hidden = !wrap.classList.contains('open');
+    }
+  });
 
   $('#viewEditBtn').addEventListener('click', () => {
     const id = viewModal.dataset.blockId;
@@ -327,7 +412,12 @@
 
   $('[data-close-edit]').addEventListener('click', closeEditModal);
   $('#editCancelBtn').addEventListener('click', closeEditModal);
-  editModal.addEventListener('click', e => { if (e.target === editModal) closeEditModal(); });
+  editModal.addEventListener('click', e => {
+    if (e.target === editModal) { closeEditModal(); return; }
+    editModal.querySelectorAll('.rt-icon-menu').forEach(menu => {
+      if (!menu.closest('.rt-icon-picker').contains(e.target)) menu.classList.add('hidden');
+    });
+  });
 
   $('#addBlockBtn').addEventListener('click', () => openEditModal(null));
   $('#emptyAddBtn').addEventListener('click', () => openEditModal(null));
@@ -394,6 +484,58 @@
     return cell;
   }
 
+  function buildRichTextToolbar(textarea) {
+    const toolbar = document.createElement('div');
+    toolbar.className = 'rt-toolbar';
+    toolbar.innerHTML = `
+      <button type="button" class="rt-btn" data-wrap="**" title="굵게"><b>B</b></button>
+      <button type="button" class="rt-btn rt-italic" data-wrap="*" title="기울임">I</button>
+      <button type="button" class="rt-btn rt-strike" data-wrap="~~" title="취소선">S</button>
+      <span class="rt-sep"></span>
+      <button type="button" class="rt-btn rt-swatch rt-swatch-gray" data-color="gray" title="회색 글씨"></button>
+      <button type="button" class="rt-btn rt-swatch rt-swatch-accent" data-color="accent" title="포인트 색 글씨"></button>
+      <button type="button" class="rt-btn rt-swatch rt-swatch-red" data-color="red" title="빨간 글씨"></button>
+      <span class="rt-sep"></span>
+      <div class="rt-icon-picker">
+        <button type="button" class="rt-btn" title="아이콘 삽입"><i data-lucide="smile-plus"></i></button>
+        <div class="rt-icon-menu hidden">
+          ${RICH_TEXT_ICONS.map(name => `<button type="button" class="rt-icon-option" data-icon="${name}">${iconHTML(name)}</button>`).join('')}
+        </div>
+      </div>
+      <button type="button" class="rt-btn" data-toggle-insert title="토글(펼침/접힘) 삽입"><i data-lucide="chevron-right"></i></button>
+    `;
+
+    toolbar.querySelectorAll('[data-wrap]').forEach(btn => {
+      btn.addEventListener('click', () => wrapSelection(textarea, btn.dataset.wrap));
+    });
+    toolbar.querySelectorAll('[data-color]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const c = btn.dataset.color;
+        wrapSelection(textarea, `[${c}]`, `[/${c}]`);
+      });
+    });
+
+    const iconPicker = toolbar.querySelector('.rt-icon-picker');
+    const iconMenu = toolbar.querySelector('.rt-icon-menu');
+    iconPicker.querySelector('button').addEventListener('click', (e) => {
+      e.stopPropagation();
+      iconMenu.classList.toggle('hidden');
+    });
+    iconMenu.querySelectorAll('.rt-icon-option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        insertAtCursor(textarea, `[icon:${btn.dataset.icon}]`);
+        iconMenu.classList.add('hidden');
+      });
+    });
+
+    toolbar.querySelector('[data-toggle-insert]').addEventListener('click', () => {
+      insertAtCursor(textarea, '[toggle:제목]\n내용\n[/toggle]');
+    });
+
+    icons();
+    return toolbar;
+  }
+
   function buildSegmentBox(seg, index) {
     const box = document.createElement('div');
     box.className = 'segment-box';
@@ -423,6 +565,8 @@
       textarea.placeholder = '설정, 메모, 디자인 노트 등을 자유롭게 적어주세요';
       textarea.value = seg.text || '';
       textarea.addEventListener('input', () => { seg.text = textarea.value; });
+
+      box.appendChild(buildRichTextToolbar(textarea));
       box.appendChild(textarea);
     } else {
       const urlRow = document.createElement('div');
