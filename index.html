@@ -98,6 +98,11 @@
       <span class="brand-name">aeoniandesign</span>
     </div>
     <nav id="categoryNav"></nav>
+    <div class="sidebar-footer">
+      <button type="button" id="sidebarUsernameBtn" class="sidebar-username-btn">
+        <span>@ae0niandreams</span><span id="sidebarAdminBadge" class="sidebar-admin-badge hidden"> | 관리자 모드</span>
+      </button>
+    </div>
   </aside>
 
   <div id="sidebarScrim" class="hidden"></div>
@@ -117,7 +122,7 @@
             <li class="sort-dropdown-option" data-value="oldest" role="option" aria-selected="false">오래된순</li>
           </ul>
         </div>
-        <button id="addBlockBtn" class="primary-btn icon-only" aria-label="카드 추가">
+        <button id="addBlockBtn" class="primary-btn icon-only admin-only hidden" aria-label="카드 추가">
           <i data-lucide="plus"></i>
         </button>
       </div>
@@ -128,7 +133,7 @@
     <div id="emptyState" class="empty-state hidden">
       <i data-lucide="image-plus"></i>
       <p>아직 등록된 카드가 없어요.</p>
-      <button id="emptyAddBtn" class="primary-btn">
+      <button id="emptyAddBtn" class="primary-btn admin-only hidden">
         <i data-lucide="plus"></i> 첫 카드 추가하기
       </button>
     </div>
@@ -142,7 +147,7 @@
     <div class="view-body">
       <div class="view-meta" id="viewMeta"></div>
       <h2 id="viewTitle"></h2>
-      <div class="view-actions">
+      <div class="view-actions admin-only hidden" id="viewActions">
         <button id="viewEditBtn" class="secondary-btn"><i data-lucide="pencil"></i> 수정</button>
         <button id="viewDeleteBtn" class="danger-btn"><i data-lucide="trash-2"></i> 삭제</button>
       </div>
@@ -186,6 +191,21 @@
     <div class="edit-actions">
       <button id="editCancelBtn" class="secondary-btn">취소</button>
       <button id="editSaveBtn" class="primary-btn"><i data-lucide="check"></i> 저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 관리자 모드 비밀번호 확인 -->
+<div id="adminPasswordModal" class="modal-overlay hidden">
+  <div class="modal modal-sm">
+    <button class="modal-close" data-close-admin-password><i data-lucide="x"></i></button>
+    <div class="auth-box">
+      <i data-lucide="shield-check"></i>
+      <h1>관리자 모드</h1>
+      <p>관리자 비밀번호를 입력해 주세요</p>
+      <input type="password" id="adminPasswordInput" placeholder="비밀번호" autocomplete="current-password">
+      <button id="adminPasswordSubmitBtn" class="primary-btn">확인</button>
+      <p id="adminPasswordError" class="auth-error hidden"></p>
     </div>
   </div>
 </div>

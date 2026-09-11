@@ -33,6 +33,17 @@
   const addImageSegmentBtn = $('#addImageSegmentBtn');
   const editSaveBtn = $('#editSaveBtn');
 
+  const addBlockBtn = $('#addBlockBtn');
+  const emptyAddBtn = $('#emptyAddBtn');
+  const viewActions = $('#viewActions');
+
+  const sidebarUsernameBtn = $('#sidebarUsernameBtn');
+  const sidebarAdminBadge = $('#sidebarAdminBadge');
+  const adminPasswordModal = $('#adminPasswordModal');
+  const adminPasswordInput = $('#adminPasswordInput');
+  const adminPasswordError = $('#adminPasswordError');
+  const adminPasswordSubmitBtn = $('#adminPasswordSubmitBtn');
+
   function icons() {
     if (window.lucide) lucide.createIcons();
   }
@@ -67,6 +78,85 @@
     div.textContent = str;
     return div.innerHTML;
   }
+
+  // ---------- 관리자 모드 ----------
+  // 카드 추가/수정/삭제는 관리자 모드에서만 할 수 있다. 관리자 여부는
+  // localStorage에 저장해서 새로고침/재방문해도 유지되고, 사이드바 하단의
+  // 아이디를 눌러 전환한다.
+  const ADMIN_STORAGE_KEY = 'lookbook_admin';
+  let isAdmin = localStorage.getItem(ADMIN_STORAGE_KEY) === '1';
+
+  function applyAdminUI() {
+    sidebarAdminBadge.classList.toggle('hidden', !isAdmin);
+    addBlockBtn.classList.toggle('hidden', !isAdmin);
+    emptyAddBtn.classList.toggle('hidden', !isAdmin);
+    viewActions.classList.toggle('hidden', !isAdmin);
+  }
+
+  function setAdminMode(next) {
+    isAdmin = next;
+    localStorage.setItem(ADMIN_STORAGE_KEY, isAdmin ? '1' : '0');
+    applyAdminUI();
+  }
+
+  function openAdminPasswordModal() {
+    adminPasswordInput.value = '';
+    adminPasswordError.classList.add('hidden');
+    adminPasswordModal.classList.remove('hidden');
+    adminPasswordInput.focus();
+  }
+
+  function closeAdminPasswordModal() {
+    adminPasswordModal.classList.add('hidden');
+  }
+
+  async function trySubmitAdminPassword() {
+    const password = adminPasswordInput.value;
+    if (!password) return;
+    adminPasswordSubmitBtn.disabled = true;
+    adminPasswordError.classList.add('hidden');
+    try {
+      const ok = await LookbookFirebase.verifyAdminPassword(password);
+      if (ok) {
+        setAdminMode(true);
+        closeAdminPasswordModal();
+        toast('관리자 모드로 전환됐어요.');
+      } else {
+        adminPasswordError.textContent = '비밀번호가 올바르지 않아요.';
+        adminPasswordError.classList.remove('hidden');
+      }
+    } catch (err) {
+      console.error(err);
+      adminPasswordError.textContent = '확인 중 오류가 발생했어요. 네트워크를 확인해주세요.';
+      adminPasswordError.classList.remove('hidden');
+    } finally {
+      adminPasswordSubmitBtn.disabled = false;
+    }
+  }
+
+  sidebarUsernameBtn.addEventListener('click', () => {
+    if (isAdmin) {
+      // 토스트 메시지(2200ms 후 자동으로 사라짐)와 맞춰서, 메시지가 사라지는
+      // 시점에 실제로 유저 모드로 전환한다.
+      toast('유저 모드로 전환됩니다');
+      setTimeout(() => setAdminMode(false), 2200);
+    } else {
+      openAdminPasswordModal();
+    }
+  });
+
+  adminPasswordModal.querySelectorAll('[data-close-admin-password]').forEach(btn => {
+    btn.addEventListener('click', closeAdminPasswordModal);
+  });
+  adminPasswordModal.addEventListener('click', e => {
+    if (e.target === adminPasswordModal) closeAdminPasswordModal();
+  });
+  adminPasswordSubmitBtn.addEventListener('click', trySubmitAdminPassword);
+  adminPasswordInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') trySubmitAdminPassword();
+  });
+
+  applyAdminUI();
 
   // ---------- 텍스트 박스 서식(굵게/기울임/취소선/색/아이콘/토글) ----------
   // 수정창의 텍스트 박스는 contenteditable이라 서식이 곧바로 렌더링된 채로
@@ -849,7 +939,8 @@
   // 키보드로 모달 닫기
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    if (!editModal.classList.contains('hidden')) closeEditModal();
+    if (!adminPasswordModal.classList.contains('hidden')) closeAdminPasswordModal();
+    else if (!editModal.classList.contains('hidden')) closeEditModal();
     else if (!viewModal.classList.contains('hidden')) closeViewModal();
   });
 

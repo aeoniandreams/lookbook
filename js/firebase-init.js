@@ -7,6 +7,7 @@ import {
   initializeApp,
   getAuth,
   signInWithEmailAndPassword,
+  signOut,
   onAuthStateChanged,
   setPersistence,
   browserLocalPersistence,
@@ -19,6 +20,7 @@ import {
 } from "./vendor/firebase-bundle.js";
 
 const AUTH_EMAIL = window.FIREBASE_AUTH_EMAIL;
+const ADMIN_EMAIL = window.FIREBASE_ADMIN_EMAIL;
 const BLOCKS_COLLECTION = "blocks";
 
 // ---------- 비밀번호 입장 화면 DOM ----------
@@ -70,11 +72,35 @@ async function removeBlock(block) {
   await deleteDoc(doc(db, BLOCKS_COLLECTION, block.id));
 }
 
+// ---------- 관리자 모드 비밀번호 확인 ----------
+// 관리자 비밀번호 확인 전용 보조 Firebase 앱 인스턴스. 메인 로그인 세션(위
+// app/auth)과 완전히 분리되어 있어서, 비밀번호가 맞는지 확인하는 동안에도
+// 실제 로그인 상태는 전혀 바뀌지 않는다.
+let adminCheckAuth;
+try {
+  const adminCheckApp = initializeApp(window.FIREBASE_CONFIG, "adminCheck");
+  adminCheckAuth = getAuth(adminCheckApp);
+} catch (err) {
+  console.error("[Lookbook] 관리자 확인용 보조 앱 초기화에 실패했어요:", err);
+}
+
+async function verifyAdminPassword(password) {
+  if (!adminCheckAuth || !ADMIN_EMAIL || !password) return false;
+  try {
+    await signInWithEmailAndPassword(adminCheckAuth, ADMIN_EMAIL, password);
+    await signOut(adminCheckAuth);
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
+
 window.LookbookFirebase = {
   signIn,
   subscribeBlocks,
   saveBlock,
-  removeBlock
+  removeBlock,
+  verifyAdminPassword
 };
 
 // ---------- 비밀번호 입장 화면 동작 ----------
