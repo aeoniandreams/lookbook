@@ -122,19 +122,36 @@
     adminPasswordModal.classList.add('hidden');
   }
 
+  function describeAdminAuthError(code) {
+    switch (code) {
+      case 'auth/invalid-credential':
+      case 'auth/wrong-password':
+      case 'auth/user-not-found':
+        return '비밀번호가 올바르지 않아요. (관리자 계정 자체가 없어도 이 메시지가 떠요 — Firebase 콘솔 Authentication에 그 이메일 계정이 실제로 있는지 확인해보세요)';
+      case 'auth/too-many-requests':
+        return '시도가 너무 많아요. 잠시 후 다시 시도해주세요.';
+      case 'auth/network-request-failed':
+        return '네트워크 오류예요. 인터넷 연결을 확인해주세요.';
+      case 'admin/not-configured':
+        return '관리자 계정이 설정되지 않았어요. js/firebase-config.js의 FIREBASE_ADMIN_EMAIL을 확인해주세요.';
+      default:
+        return code ? `확인에 실패했어요. (${code})` : '비밀번호를 입력해주세요.';
+    }
+  }
+
   async function trySubmitAdminPassword() {
     const password = adminPasswordInput.value;
     if (!password) return;
     adminPasswordSubmitBtn.disabled = true;
     adminPasswordError.classList.add('hidden');
     try {
-      const ok = await LookbookFirebase.verifyAdminPassword(password);
-      if (ok) {
+      const result = await LookbookFirebase.verifyAdminPassword(password);
+      if (result.ok) {
         // 실제 관리자 로그인이 곧 admin-auth-changed 이벤트로 UI에 반영된다.
         closeAdminPasswordModal();
         toast('관리자 모드로 전환됐어요.');
       } else {
-        adminPasswordError.textContent = '비밀번호가 올바르지 않아요.';
+        adminPasswordError.textContent = describeAdminAuthError(result.code);
         adminPasswordError.classList.remove('hidden');
       }
     } catch (err) {

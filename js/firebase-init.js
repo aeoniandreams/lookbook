@@ -94,13 +94,21 @@ try {
 }
 
 async function verifyAdminPassword(password) {
-  if (!adminAuth || !ADMIN_EMAIL || !password) return false;
+  if (!adminAuth || !ADMIN_EMAIL) {
+    console.error("[Lookbook] 관리자 계정이 설정되지 않았어요. firebase-config.js의 FIREBASE_ADMIN_EMAIL을 확인해주세요.");
+    return { ok: false, code: "admin/not-configured" };
+  }
+  if (!password) return { ok: false, code: null };
   try {
     await setPersistence(adminAuth, browserLocalPersistence);
     await signInWithEmailAndPassword(adminAuth, ADMIN_EMAIL, password);
-    return true;
+    return { ok: true };
   } catch (err) {
-    return false;
+    // 실패 원인(계정 없음/비밀번호 틀림/네트워크 오류 등)을 콘솔에 남겨서
+    // "비밀번호가 틀렸다"는 화면 문구만으로는 알 수 없는 원인도 디버깅할 수
+    // 있게 한다.
+    console.error("[Lookbook] 관리자 로그인 실패:", err && err.code, err);
+    return { ok: false, code: err && err.code };
   }
 }
 
