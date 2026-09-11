@@ -1,6 +1,6 @@
 @font-face {
   font-family: 'Pretendard JP Variable';
-  font-weight: 45 920;
+  font-weight: 400 700;
   font-style: normal;
   font-display: swap;
   src: url('../fonts/PretendardJPVariable.woff2') format('woff2-variations');
@@ -106,10 +106,12 @@ input, textarea, select {
 .sidebar-username-btn:hover { color: var(--text); }
 .sidebar-logout-btn {
   padding: 0;
-  font-size: 12px;
+  display: flex;
+  align-items: center;
   color: var(--text-muted);
   flex-shrink: 0;
 }
+.sidebar-logout-btn svg { width: 16px; height: 16px; }
 .sidebar-logout-btn:hover { color: var(--danger); }
 .sidebar-admin-badge { color: var(--accent); font-weight: 600; }
 
