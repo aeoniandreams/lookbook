@@ -5,11 +5,76 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Lookbook — aeoniandesign</title>
 <link rel="stylesheet" href="css/style.css">
+<script>
+  // 로딩 화면을 최소 1초는 보여주기 위한 기준 시각. firebase-init.js는 ES
+  // 모듈이라 Firebase import가 전부 끝나야 실행되는데, 그 안에서 시각을
+  // 재면 이미 import 로딩 시간만큼 늦게 잰 게 되어버린다. 그래서 아무것도
+  // 기다리지 않는 이 스크립트(페이지 파싱 중 가장 먼저 실행됨)에서 미리
+  // 기록해두고, firebase-init.js가 로그인 여부 확인을 끝냈을 때 이 값과
+  // 비교해서 필요하면 조금 더 기다린다.
+  window.__pageLoadStart = Date.now();
+</script>
 </head>
 <body>
 
+<!-- 로딩 화면. 로그인 상태를 아직 확인 중일 때(새로고침 직후 등) 잠깐
+     보여준다 — 이게 없으면 로그인 화면이 잠깐 번쩍이고 사라진다 (Firebase가
+     "이미 로그인되어 있다"는 걸 확인하는 데도 시간이 걸리기 때문). 로그인
+     여부가 확인되면 firebase-init.js가 이 화면을 숨기고 맞는 화면(로그인
+     폼 또는 앱 화면)을 보여준다. -->
+<div id="loadingView" class="loading-view">
+  <div class="loading-content">
+    <p class="loading-dots-text">Loading<span id="loadingDots" class="loading-dots"></span></p>
+    <img id="loadingImage" class="loading-image" alt="" hidden>
+  </div>
+</div>
+<script>
+  // 점 3개가 하나씩 늘었다 다시 0개로 돌아가는 애니메이션과, 이미지를 2초마다
+  // 무작위로 바꾸는 동작을 여기서 바로 시작한다. firebase-init.js는 ES 모듈이라
+  // import가 전부 끝나야 실행되는데, 이 로딩 화면은 정확히 그 기다리는 동안
+  // 보여주는 화면이라 그 실행을 기다리면 안 된다 — 그래서 이 스크립트는 일반
+  // 스크립트로 두고 페이지가 파싱되는 즉시 바로 시작한다.
+  (function () {
+    var LOADING_IMAGES = [
+      'images/loading/1.webp',
+      'images/loading/2.webp',
+      'images/loading/3.webp',
+      'images/loading/4.webp',
+      'images/loading/5.webp'
+    ];
+    // 그냥 무작위로 src만 바꾸면 처음 등장하는 순간마다 그제서야 네트워크
+    // 요청이 나가서 화면이 잠깐 멈춘 것처럼 보이는데, new Image()로 미리
+    // 받아두면 브라우저 캐시에 이미 있어서 2초마다 바뀔 때 끊김 없이 바로
+    // 표시된다.
+    LOADING_IMAGES.forEach(function (src) {
+      var preload = new Image();
+      preload.src = src;
+    });
+
+    var dotsEl = document.getElementById('loadingDots');
+    var dotsCount = 0;
+    function renderDots() {
+      dotsEl.textContent = '.'.repeat(dotsCount);
+    }
+    renderDots();
+    setInterval(function () {
+      dotsCount = (dotsCount + 1) % 4;
+      renderDots();
+    }, 350);
+
+    var imgEl = document.getElementById('loadingImage');
+    function pickRandomLoadingImage() {
+      var idx = Math.floor(Math.random() * LOADING_IMAGES.length);
+      imgEl.src = LOADING_IMAGES[idx];
+      imgEl.hidden = false;
+    }
+    pickRandomLoadingImage();
+    setInterval(pickRandomLoadingImage, 2000);
+  })();
+</script>
+
 <!-- 비밀번호 입장 화면 -->
-<div id="authGate" class="auth-gate">
+<div id="authGate" class="auth-gate hidden">
   <div class="auth-box">
     <i data-lucide="lock"></i>
     <h1>Lookbook</h1>
@@ -126,6 +191,8 @@
     if (window.LookbookFirebase) return;
     var authError = document.getElementById('authError');
     if (!authError || !authError.classList.contains('hidden')) return;
+    document.getElementById('loadingView').hidden = true;
+    document.getElementById('authGate').classList.remove('hidden');
     authError.textContent =
       'Firebase 스크립트를 불러오지 못했어요. 인터넷 연결, 광고 차단/보안 확장 프로그램, 방화벽을 확인한 뒤 새로고침해주세요. (F12 개발자 도구 → Console 탭에서 자세한 오류를 확인할 수 있어요)';
     authError.classList.remove('hidden');

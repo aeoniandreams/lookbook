@@ -22,6 +22,7 @@ const AUTH_EMAIL = window.FIREBASE_AUTH_EMAIL;
 const BLOCKS_COLLECTION = "blocks";
 
 // ---------- 비밀번호 입장 화면 DOM ----------
+const loadingView = document.getElementById("loadingView");
 const authGate = document.getElementById("authGate");
 const appRoot = document.getElementById("app");
 const passwordInput = document.getElementById("authPasswordInput");
@@ -30,6 +31,8 @@ const submitBtn = document.getElementById("authSubmitBtn");
 
 function showFatalError(message) {
   console.error("[Lookbook] " + message);
+  loadingView.hidden = true;
+  authGate.classList.remove("hidden");
   authError.textContent = message;
   authError.classList.remove("hidden");
 }
@@ -86,9 +89,19 @@ function showApp() {
   window.dispatchEvent(new CustomEvent("firebase-ready"));
 }
 
+// 로그인 여부 확인이 너무 빨리 끝나면 로딩 화면(이미지 애니메이션 등)이
+// 한 프레임 반짝이고 사라지는 것처럼 보일 수 있어서, 페이지가 열린 뒤
+// 최소 1초는 로딩 화면이 보이도록 보장한다. 기준 시각(window.__pageLoadStart)은
+// index.html의 아무것도 기다리지 않는 스크립트에서 미리 재둔 값이다.
+const MIN_LOADING_MS = 1000;
 onAuthStateChanged(auth, (user) => {
-  if (user) showApp();
-  else showGate();
+  const elapsed = Date.now() - (window.__pageLoadStart || Date.now());
+  const remaining = Math.max(0, MIN_LOADING_MS - elapsed);
+  setTimeout(() => {
+    loadingView.hidden = true;
+    if (user) showApp();
+    else showGate();
+  }, remaining);
 });
 
 function describeAuthError(err) {
