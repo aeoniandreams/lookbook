@@ -394,7 +394,7 @@ input, textarea, select {
 .loading-dots-text {
   margin: 0;
   font-size: 15px;
-  font-weight: 500;
+  font-weight: 600;
   color: var(--text);
 }
 /* 점 개수(0~3개)가 바뀌어도 "Loading" 글자 위치가 옆으로 흔들리지 않도록
