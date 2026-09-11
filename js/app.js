@@ -756,12 +756,51 @@
   addImageSegmentBtn.addEventListener('click', addImageSegment);
   addReferenceSegmentBtn.addEventListener('click', addReferenceSegment);
 
-  function moveSegment(index, dir) {
-    const target = index + dir;
-    if (target < 0 || target >= workingSegments.length) return;
-    const [seg] = workingSegments.splice(index, 1);
-    workingSegments.splice(target, 0, seg);
+  // 드래그로 순서 바꾸기: 드래그 시작한 박스의 인덱스를 여기 담아두고, 드롭된
+  // 박스 위에서 마우스가 위쪽 절반/아래쪽 절반 중 어디였는지로 삽입 위치를
+  // 정한다.
+  let dragSegmentIndex = null;
+
+  function reorderSegment(fromIndex, toIndex) {
+    if (fromIndex === toIndex) return;
+    const [seg] = workingSegments.splice(fromIndex, 1);
+    const adjustedTarget = fromIndex < toIndex ? toIndex - 1 : toIndex;
+    workingSegments.splice(adjustedTarget, 0, seg);
     renderSegmentList();
+  }
+
+  function attachSegmentDragHandlers(box, index) {
+    const handle = box.querySelector('.segment-drag-handle');
+    handle.addEventListener('dragstart', (e) => {
+      dragSegmentIndex = index;
+      box.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(index));
+    });
+    handle.addEventListener('dragend', () => {
+      dragSegmentIndex = null;
+      editSegmentList.querySelectorAll('.segment-box').forEach(b => {
+        b.classList.remove('dragging', 'drag-over-top', 'drag-over-bottom');
+      });
+    });
+    box.addEventListener('dragover', (e) => {
+      if (dragSegmentIndex === null) return;
+      e.preventDefault();
+      const isAfter = (e.clientY - box.getBoundingClientRect().top) > box.offsetHeight / 2;
+      box.classList.toggle('drag-over-top', !isAfter);
+      box.classList.toggle('drag-over-bottom', isAfter);
+    });
+    box.addEventListener('dragleave', () => {
+      box.classList.remove('drag-over-top', 'drag-over-bottom');
+    });
+    box.addEventListener('drop', (e) => {
+      e.preventDefault();
+      box.classList.remove('drag-over-top', 'drag-over-bottom');
+      if (dragSegmentIndex === null) return;
+      const isAfter = (e.clientY - box.getBoundingClientRect().top) > box.offsetHeight / 2;
+      reorderSegment(dragSegmentIndex, index + (isAfter ? 1 : 0));
+      dragSegmentIndex = null;
+    });
   }
 
   function removeSegment(index) {
@@ -926,19 +965,17 @@
     header.className = 'segment-box-header';
     header.innerHTML = `
       <span class="segment-type-label">
+        <span class="segment-drag-handle" draggable="true" title="드래그해서 순서 바꾸기"><i data-lucide="grip-vertical"></i></span>
         <i data-lucide="${typeIcon}"></i>
         ${typeLabel}
       </span>
       <div class="segment-controls">
-        <button type="button" class="seg-btn seg-up" title="위로"><i data-lucide="chevron-up"></i></button>
-        <button type="button" class="seg-btn seg-down" title="아래로"><i data-lucide="chevron-down"></i></button>
         <button type="button" class="seg-btn seg-remove" title="박스 삭제"><i data-lucide="trash-2"></i></button>
       </div>
     `;
-    header.querySelector('.seg-up').addEventListener('click', () => moveSegment(index, -1));
-    header.querySelector('.seg-down').addEventListener('click', () => moveSegment(index, 1));
     header.querySelector('.seg-remove').addEventListener('click', () => removeSegment(index));
     box.appendChild(header);
+    attachSegmentDragHandlers(box, index);
 
     if (seg.type === 'text') {
       const editable = document.createElement('div');

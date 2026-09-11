@@ -831,6 +831,18 @@ input, textarea, select {
 .seg-btn:hover { background: var(--surface-alt); color: var(--text); }
 .seg-btn svg { width: 14px; height: 14px; }
 
+.segment-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  cursor: grab;
+  color: var(--text-muted);
+}
+.segment-drag-handle:active { cursor: grabbing; }
+.segment-drag-handle svg { width: 14px; height: 14px; }
+.segment-box.dragging { opacity: 0.4; }
+.segment-box.drag-over-top { box-shadow: inset 0 3px 0 0 var(--accent); }
+.segment-box.drag-over-bottom { box-shadow: inset 0 -3px 0 0 var(--accent); }
+
 .rt-toolbar {
   display: flex;
   align-items: center;
