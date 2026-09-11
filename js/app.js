@@ -647,6 +647,16 @@
     if (e.target === viewModal) { closeViewModal(); return; }
     const refItem = e.target.closest('.reference-item');
     if (refItem) {
+      // 모바일(호버가 없는 화면)에서는 첫 탭으로 코멘트 오버레이만 보여주고,
+      // 이미 펼쳐진 상태에서 한 번 더 탭해야 원본이 뜬다. 코멘트가 없는
+      // 항목은 보여줄 게 없으니 바로 원본을 연다. 데스크탑은 마우스 호버로
+      // 이미 오버레이가 보이는 상태라 한 번 클릭으로 바로 연다.
+      const isMobile = window.matchMedia('(max-width: 760px)').matches;
+      const hasComment = !!refItem.querySelector('.reference-comment');
+      if (isMobile && hasComment && !refItem.classList.contains('revealed')) {
+        refItem.classList.add('revealed');
+        return;
+      }
       const img = refItem.querySelector('img');
       if (img) openImageLightbox(img.src);
       return;

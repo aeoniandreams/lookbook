@@ -615,32 +615,31 @@ input, textarea, select {
   width: 100%;
   display: block;
   background: var(--surface-alt);
-  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
   transition: filter 0.15s ease;
 }
 .reference-comment {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: flex-end;
+  padding: 10px;
+  color: #fff;
   font-size: 12px;
-  color: var(--text-muted);
-  padding: 6px 8px;
   line-height: 1.4;
+  background: linear-gradient(to top, rgba(20, 16, 35, 0.75), transparent 65%);
+  opacity: 0;
+  transition: opacity 0.15s ease;
 }
 .reference-comment:empty { display: none; }
+/* 데스크탑은 마우스 호버로, 모바일은 첫 탭에서 JS가 붙이는 .revealed
+   클래스로 같은 오버레이를 보여준다. */
+.reference-item:hover .reference-comment,
+.reference-item.revealed .reference-comment { opacity: 1; }
+.reference-item:hover img,
+.reference-item.revealed img { filter: brightness(0.6); }
 
 @media (min-width: 761px) {
   .reference-masonry { columns: 3; }
-  .reference-comment {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: flex-end;
-    padding: 12px;
-    color: #fff;
-    background: linear-gradient(to top, rgba(20, 16, 35, 0.75), transparent 65%);
-    opacity: 0;
-    transition: opacity 0.15s ease;
-  }
-  .reference-item:hover .reference-comment { opacity: 1; }
-  .reference-item:hover img { filter: brightness(0.6); }
 }
 
 /* 수정창: 레퍼런스 항목(URL + 코멘트) 관리 */
