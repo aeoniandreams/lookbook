@@ -176,6 +176,19 @@ input, textarea, select {
 .breadcrumb svg { width: 16px; height: 16px; color: var(--text-muted); }
 .crumb-muted { color: var(--text-muted); font-weight: 500; }
 
+.header-actions { display: flex; align-items: center; gap: 10px; }
+.sort-select {
+  padding: 9px 30px 9px 14px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.sort-select:focus { outline: none; border-color: var(--accent); }
+
 /* ---------- 버튼 ---------- */
 .primary-btn, .secondary-btn, .danger-btn {
   display: inline-flex;
@@ -464,31 +477,24 @@ input, textarea, select {
 }
 .rt-icon svg { width: 1em; height: 1em; }
 
-.text-toggle {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  margin: 4px 0;
-  overflow: hidden;
-}
+.text-toggle { margin: 4px 0; }
 .text-toggle-header {
-  width: 100%;
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 10px;
-  text-align: left;
+  padding: 4px 0;
   font-weight: 600;
-  background: var(--surface-alt);
+  cursor: pointer;
 }
-.text-toggle-header:hover { background: var(--border); }
 .toggle-chevron { width: 15px; height: 15px; flex-shrink: 0; color: var(--text-muted); }
 .text-toggle:not(.open) .toggle-chevron-open { display: none; }
 .text-toggle.open .toggle-chevron-closed { display: none; }
 .toggle-body {
-  padding: 10px 12px;
+  display: none;
+  padding: 4px 0 4px 21px;
   line-height: 1.6;
-  border-top: 1px solid var(--border);
 }
+.text-toggle.open .toggle-body { display: block; }
 
 .gallery-row { display: flex; gap: 8px; }
 .gallery-row img {
@@ -709,15 +715,26 @@ input, textarea, select {
 .rt-icon-option:hover { background: var(--surface-alt); color: var(--text); }
 .rt-icon-option svg { width: 16px; height: 16px; }
 
-.segment-textarea {
+.segment-editable {
   width: 100%;
+  min-height: 90px;
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface);
-  resize: vertical;
+  line-height: 1.6;
+  font-size: 14px;
+  color: var(--text);
 }
-.segment-textarea:focus { outline: none; border-color: var(--accent); }
+.segment-editable:focus { outline: none; border-color: var(--accent); }
+.segment-editable:empty::before {
+  content: attr(data-placeholder);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+.segment-editable .rt-gray { color: var(--text-muted); }
+.segment-editable .rt-accent { color: var(--accent); }
+.segment-editable .rt-red { color: var(--danger); }
 
 .segment-add-row { display: flex; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
 

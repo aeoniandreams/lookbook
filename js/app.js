@@ -12,6 +12,8 @@
   const blockGrid = $('#blockGrid');
   const emptyState = $('#emptyState');
   const breadcrumb = $('#breadcrumb');
+  const sortSelect = $('#sortSelect');
+  let sortOrder = 'alpha';
 
   const viewModal = $('#viewModal');
   const viewSegments = $('#viewSegments');
@@ -64,19 +66,95 @@
   }
 
   // ---------- 텍스트 박스 서식(굵게/기울임/취소선/색/아이콘/토글) ----------
-  // 저장은 항상 이 가벼운 마크업 문법의 순수 텍스트로 한다 (contenteditable
-  // 없이 textarea + 툴바 버튼으로 마크업을 삽입/제거하는 방식).
-  //   **굵게**  *기울임*  ~~취소선~~
-  //   [gray]..[/gray] [accent]..[/accent] [red]..[/red]
-  //   [icon:아이콘이름]
-  //   [toggle:제목]\n내용\n[/toggle]
+  // 수정창의 텍스트 박스는 contenteditable이라 서식이 곧바로 렌더링된 채로
+  // 보이고 편집된다. 저장은 정제(sanitize)된 HTML 문자열로 한다.
   const RICH_TEXT_ICONS = CATEGORIES.map(c => c.icon);
 
-  function renderInlineMarkup(escapedText) {
+  const RICH_ALLOWED_TAGS = new Set([
+    'B', 'I', 'STRIKE', 'SPAN', 'DIV', 'BR',
+    'SVG', 'PATH', 'CIRCLE', 'G', 'DEFS', 'CLIPPATH'
+  ]);
+  const RICH_ALLOWED_ATTRS = {
+    SPAN: ['class'],
+    DIV: ['class'],
+    I: ['data-lucide', 'class'],
+    SVG: ['viewbox', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'class'],
+    PATH: ['d'],
+    CIRCLE: ['cx', 'cy', 'r'],
+    G: ['clip-path'],
+    CLIPPATH: ['id']
+  };
+
+  // 허용 목록에 없는 태그는 자식만 남기고 벗겨내고, 허용된 태그는 허용되지
+  // 않은 속성만 제거한다. 붙여넣기 등으로 들어올 수 있는 임의의 HTML을
+  // 저장/렌더링 전에 항상 이 필터를 거치게 한다.
+  function sanitizeRichNode(parent) {
+    let node = parent.firstChild;
+    while (node) {
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        // SVG 요소는 tagName이 소문자(svg, path, circle...)로 나온다
+        const tag = node.tagName.toUpperCase();
+        if (!RICH_ALLOWED_TAGS.has(tag)) {
+          const afterRemoval = node.nextSibling;
+          const firstChild = node.firstChild;
+          while (node.firstChild) parent.insertBefore(node.firstChild, node);
+          parent.removeChild(node);
+          node = firstChild || afterRemoval;
+          continue;
+        }
+        const allowed = RICH_ALLOWED_ATTRS[tag] || [];
+        [...node.attributes].forEach(attr => {
+          if (!allowed.includes(attr.name.toLowerCase())) node.removeAttribute(attr.name);
+        });
+        sanitizeRichNode(node);
+        node = node.nextSibling;
+      } else if (node.nodeType === Node.TEXT_NODE) {
+        node = node.nextSibling;
+      } else {
+        const toRemove = node;
+        node = node.nextSibling;
+        parent.removeChild(toRemove);
+      }
+    }
+  }
+
+  function sanitizeRichHTML(html) {
+    const div = document.createElement('div');
+    div.innerHTML = html || '';
+    sanitizeRichNode(div);
+    return div.innerHTML;
+  }
+
+  function plainTextToHTML(text) {
+    return escapeHTML(text || '').replace(/\n/g, '<br>');
+  }
+
+  function looksLikeHTML(str) {
+    return /<[a-z][\s\S]*>/i.test(str || '');
+  }
+
+  function buildToggleHTML(titleHTML, bodyHTML, open) {
+    return `<div class="text-toggle${open ? ' open' : ''}">` +
+      `<div class="text-toggle-header">` +
+        `<i data-lucide="chevron-right" class="toggle-chevron toggle-chevron-closed"></i>` +
+        `<i data-lucide="chevron-down" class="toggle-chevron toggle-chevron-open"></i>` +
+        `<span class="toggle-title">${titleHTML}</span>` +
+      `</div>` +
+      `<div class="toggle-body">${bodyHTML}</div>` +
+    `</div>`;
+  }
+
+  // 이전(v1) 가벼운 마크업 문법으로 저장된 옛 카드를 위한 호환 변환.
+  //   **굵게**  *기울임*  ~~취소선~~
+  //   [gray]..[/gray] [accent]..[/accent] [red]..[/red]  [icon:이름]
+  //   [toggle:제목]\n내용\n[/toggle]
+  const V1_MARKUP_RE = /\*\*[\s\S]+?\*\*|~~[\s\S]+?~~|\[(?:gray|accent|red|icon:[a-z0-9-]+|toggle:)[\s\S]*?\]/;
+
+  function markupInlineToHTML(escapedText) {
     let html = escapedText;
-    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
-    html = html.replace(/~~(.+?)~~/g, '<del>$1</del>');
+    html = html.replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+    html = html.replace(/\*(.+?)\*/g, '<i>$1</i>');
+    html = html.replace(/~~(.+?)~~/g, '<strike>$1</strike>');
     html = html.replace(/\[gray\](.+?)\[\/gray\]/g, '<span class="rt-gray">$1</span>');
     html = html.replace(/\[accent\](.+?)\[\/accent\]/g, '<span class="rt-accent">$1</span>');
     html = html.replace(/\[red\](.+?)\[\/red\]/g, '<span class="rt-red">$1</span>');
@@ -85,55 +163,76 @@
     return html;
   }
 
-  function renderRichText(rawText) {
+  function markupToHTML(rawText) {
     const escaped = escapeHTML(rawText || '');
     const toggles = [];
     let working = escaped.replace(/\[toggle:(.*?)\]\n?([\s\S]*?)\[\/toggle\]/g, (match, title, body) => {
       const idx = toggles.length;
-      const titleHTML = renderInlineMarkup(title.trim());
-      const bodyHTML = renderInlineMarkup(body.trim()).replace(/\n/g, '<br>');
-      toggles.push(
-        `<div class="text-toggle">` +
-          `<button type="button" class="text-toggle-header">` +
-            `<i data-lucide="chevron-right" class="toggle-chevron toggle-chevron-closed"></i>` +
-            `<i data-lucide="chevron-down" class="toggle-chevron toggle-chevron-open"></i>` +
-            `<span>${titleHTML}</span>` +
-          `</button>` +
-          `<div class="toggle-body" hidden>${bodyHTML}</div>` +
-        `</div>`
-      );
-      return ` TOGGLE${idx} `;
+      toggles.push(buildToggleHTML(
+        markupInlineToHTML(title.trim()),
+        markupInlineToHTML(body.trim()).replace(/\n/g, '<br>'),
+        true
+      ));
+      return `@@TOGGLE${idx}@@`;
     });
-    working = renderInlineMarkup(working);
+    working = markupInlineToHTML(working);
     working = working.replace(/\n/g, '<br>');
-    working = working.replace(/ TOGGLE(\d+) /g, (m, i) => toggles[Number(i)]);
+    working = working.replace(/@@TOGGLE(\d+)@@/g, (m, i) => toggles[Number(i)]);
     return working;
   }
 
-  function wrapSelection(textarea, before, after = before) {
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const value = textarea.value;
-    const selected = value.slice(start, end);
-    textarea.value = value.slice(0, start) + before + selected + after + value.slice(end);
-    textarea.focus();
-    if (selected) {
-      textarea.selectionStart = start + before.length;
-      textarea.selectionEnd = start + before.length + selected.length;
-    } else {
-      textarea.selectionStart = textarea.selectionEnd = start + before.length;
-    }
-    textarea.dispatchEvent(new Event('input'));
+  function richTextSourceToHTML(text) {
+    if (!text) return '';
+    if (looksLikeHTML(text)) return sanitizeRichHTML(text);
+    if (V1_MARKUP_RE.test(text)) return sanitizeRichHTML(markupToHTML(text));
+    return plainTextToHTML(text);
   }
 
-  function insertAtCursor(textarea, text) {
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const value = textarea.value;
-    textarea.value = value.slice(0, start) + text + value.slice(end);
-    textarea.selectionStart = textarea.selectionEnd = start + text.length;
-    textarea.focus();
-    textarea.dispatchEvent(new Event('input'));
+  // 수정창: 토글을 전부 펼친 채로 보여줘야 제목/내용을 편하게 고칠 수 있다.
+  function richTextEditHTML(text) {
+    const div = document.createElement('div');
+    div.innerHTML = richTextSourceToHTML(text);
+    div.querySelectorAll('.text-toggle').forEach(t => t.classList.add('open'));
+    return div.innerHTML;
+  }
+
+  // 상세 보기: 토글은 항상 접힌 채로 시작한다.
+  function richTextViewHTML(text) {
+    const div = document.createElement('div');
+    div.innerHTML = richTextSourceToHTML(text);
+    div.querySelectorAll('.text-toggle').forEach(t => t.classList.remove('open'));
+    return div.innerHTML;
+  }
+
+  function richTextIsEmpty(html) {
+    if (!html) return true;
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    if (div.querySelector('svg, i[data-lucide]')) return false;
+    return !div.textContent.trim();
+  }
+
+  // 툴바의 글씨색 버튼: 선택 영역을 <span class="rt-xxx">로 감싼다
+  // (execCommand foreColor는 인라인 color 스타일을 남겨 정제하기 까다로움).
+  function wrapSelectionWithClass(editable, className) {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+    const range = sel.getRangeAt(0);
+    if (!editable.contains(range.commonAncestorContainer)) return;
+    const span = document.createElement('span');
+    span.className = className;
+    try {
+      range.surroundContents(span);
+    } catch (err) {
+      const content = range.extractContents();
+      span.appendChild(content);
+      range.insertNode(span);
+    }
+    sel.removeAllRanges();
+    const newRange = document.createRange();
+    newRange.selectNodeContents(span);
+    sel.addRange(newRange);
+    editable.dispatchEvent(new Event('input'));
   }
 
   // ---------- 옛 데이터 형식(content + images + imageLayout) 호환 ----------
@@ -232,7 +331,15 @@
       const subIds = cat.subs.map(s => s.id);
       blocks = allBlocks.filter(b => subIds.includes(b.subcategoryId));
     }
-    return blocks.slice().sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ko'));
+    const sorted = blocks.slice();
+    if (sortOrder === 'newest') {
+      sorted.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    } else if (sortOrder === 'oldest') {
+      sorted.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+    } else {
+      sorted.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ko'));
+    }
+    return sorted;
   }
 
   function renderBreadcrumb() {
@@ -294,10 +401,15 @@
     renderGrid();
   }
 
+  sortSelect.addEventListener('change', () => {
+    sortOrder = sortSelect.value;
+    renderGrid();
+  });
+
   // ---------- 상세 보기 모달 ----------
   function segmentViewHTML(seg) {
     if (seg.type === 'text') {
-      return `<div class="view-text-block">${renderRichText(seg.text || '')}</div>`;
+      return `<div class="view-text-block">${richTextViewHTML(seg.text || '')}</div>`;
     }
     const cls = seg.images.length > 1 ? 'gallery-row multi' : 'gallery-row single';
     return `<div class="${cls}">${seg.images.map(img => `<img src="${img.url}" alt="" loading="lazy">`).join('')}</div>`;
@@ -330,10 +442,7 @@
     if (e.target === viewModal) { closeViewModal(); return; }
     const header = e.target.closest('.text-toggle-header');
     if (header) {
-      const wrap = header.closest('.text-toggle');
-      const body = wrap.querySelector('.toggle-body');
-      wrap.classList.toggle('open');
-      body.hidden = !wrap.classList.contains('open');
+      header.closest('.text-toggle').classList.toggle('open');
     }
   });
 
@@ -412,11 +521,18 @@
 
   $('[data-close-edit]').addEventListener('click', closeEditModal);
   $('#editCancelBtn').addEventListener('click', closeEditModal);
+  editModal.addEventListener('mousedown', e => {
+    if (e.target.closest('.toggle-chevron')) e.preventDefault();
+  });
   editModal.addEventListener('click', e => {
     if (e.target === editModal) { closeEditModal(); return; }
     editModal.querySelectorAll('.rt-icon-menu').forEach(menu => {
       if (!menu.closest('.rt-icon-picker').contains(e.target)) menu.classList.add('hidden');
     });
+    const chevron = e.target.closest('.toggle-chevron');
+    if (chevron) {
+      chevron.closest('.text-toggle').classList.toggle('open');
+    }
   });
 
   $('#addBlockBtn').addEventListener('click', () => openEditModal(null));
@@ -484,17 +600,17 @@
     return cell;
   }
 
-  function buildRichTextToolbar(textarea) {
+  function buildRichTextToolbar(editable) {
     const toolbar = document.createElement('div');
     toolbar.className = 'rt-toolbar';
     toolbar.innerHTML = `
-      <button type="button" class="rt-btn" data-wrap="**" title="굵게"><b>B</b></button>
-      <button type="button" class="rt-btn rt-italic" data-wrap="*" title="기울임">I</button>
-      <button type="button" class="rt-btn rt-strike" data-wrap="~~" title="취소선">S</button>
+      <button type="button" class="rt-btn" data-cmd="bold" title="굵게"><b>B</b></button>
+      <button type="button" class="rt-btn rt-italic" data-cmd="italic" title="기울임">I</button>
+      <button type="button" class="rt-btn rt-strike" data-cmd="strikeThrough" title="취소선">S</button>
       <span class="rt-sep"></span>
-      <button type="button" class="rt-btn rt-swatch rt-swatch-gray" data-color="gray" title="회색 글씨"></button>
-      <button type="button" class="rt-btn rt-swatch rt-swatch-accent" data-color="accent" title="포인트 색 글씨"></button>
-      <button type="button" class="rt-btn rt-swatch rt-swatch-red" data-color="red" title="빨간 글씨"></button>
+      <button type="button" class="rt-btn rt-swatch rt-swatch-gray" data-color="rt-gray" title="회색 글씨"></button>
+      <button type="button" class="rt-btn rt-swatch rt-swatch-accent" data-color="rt-accent" title="포인트 색 글씨"></button>
+      <button type="button" class="rt-btn rt-swatch rt-swatch-red" data-color="rt-red" title="빨간 글씨"></button>
       <span class="rt-sep"></span>
       <div class="rt-icon-picker">
         <button type="button" class="rt-btn" title="아이콘 삽입"><i data-lucide="smile-plus"></i></button>
@@ -505,13 +621,23 @@
       <button type="button" class="rt-btn" data-toggle-insert title="토글(펼침/접힘) 삽입"><i data-lucide="chevron-right"></i></button>
     `;
 
-    toolbar.querySelectorAll('[data-wrap]').forEach(btn => {
-      btn.addEventListener('click', () => wrapSelection(textarea, btn.dataset.wrap));
+    // 툴바 버튼 클릭 시 contenteditable의 선택 영역이 풀리지 않도록 막는다
+    toolbar.addEventListener('mousedown', e => {
+      if (e.target.closest('.rt-btn')) e.preventDefault();
     });
+
+    toolbar.querySelectorAll('[data-cmd]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        editable.focus();
+        document.execCommand(btn.dataset.cmd, false, null);
+        editable.dispatchEvent(new Event('input'));
+      });
+    });
+
     toolbar.querySelectorAll('[data-color]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const c = btn.dataset.color;
-        wrapSelection(textarea, `[${c}]`, `[/${c}]`);
+        editable.focus();
+        wrapSelectionWithClass(editable, btn.dataset.color);
       });
     });
 
@@ -523,13 +649,19 @@
     });
     iconMenu.querySelectorAll('.rt-icon-option').forEach(btn => {
       btn.addEventListener('click', () => {
-        insertAtCursor(textarea, `[icon:${btn.dataset.icon}]`);
+        editable.focus();
+        document.execCommand('insertHTML', false, `<span class="rt-icon">${iconHTML(btn.dataset.icon)}</span>&nbsp;`);
+        icons();
         iconMenu.classList.add('hidden');
+        editable.dispatchEvent(new Event('input'));
       });
     });
 
     toolbar.querySelector('[data-toggle-insert]').addEventListener('click', () => {
-      insertAtCursor(textarea, '[toggle:제목]\n내용\n[/toggle]');
+      editable.focus();
+      document.execCommand('insertHTML', false, buildToggleHTML('제목', '내용', true) + '<div><br></div>');
+      icons();
+      editable.dispatchEvent(new Event('input'));
     });
 
     icons();
@@ -559,15 +691,21 @@
     box.appendChild(header);
 
     if (seg.type === 'text') {
-      const textarea = document.createElement('textarea');
-      textarea.className = 'segment-textarea';
-      textarea.rows = 4;
-      textarea.placeholder = '설정, 메모, 디자인 노트 등을 자유롭게 적어주세요';
-      textarea.value = seg.text || '';
-      textarea.addEventListener('input', () => { seg.text = textarea.value; });
+      const editable = document.createElement('div');
+      editable.className = 'segment-editable';
+      editable.contentEditable = 'true';
+      editable.dataset.placeholder = '설정, 메모, 디자인 노트 등을 자유롭게 적어주세요';
+      editable.innerHTML = richTextEditHTML(seg.text || '');
+      editable.addEventListener('input', () => { seg.text = editable.innerHTML; });
+      editable.addEventListener('paste', e => {
+        e.preventDefault();
+        const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+        document.execCommand('insertText', false, text);
+      });
+      seg.text = editable.innerHTML;
 
-      box.appendChild(buildRichTextToolbar(textarea));
-      box.appendChild(textarea);
+      box.appendChild(buildRichTextToolbar(editable));
+      box.appendChild(editable);
     } else {
       const urlRow = document.createElement('div');
       urlRow.className = 'image-url-row';
@@ -631,9 +769,9 @@
 
     try {
       const segments = workingSegments
-        .filter(seg => (seg.type === 'text' ? seg.text.trim() : seg.images.length))
+        .filter(seg => (seg.type === 'text' ? !richTextIsEmpty(seg.text) : seg.images.length))
         .map(seg => seg.type === 'text'
-          ? { type: 'text', id: seg.id, text: seg.text }
+          ? { type: 'text', id: seg.id, text: sanitizeRichHTML(seg.text || '') }
           : { type: 'image', id: seg.id, images: seg.images.map(({ id, url }) => ({ id, url })) });
 
       const savedImageIds = segments.filter(s => s.type === 'image').flatMap(s => s.images.map(img => img.id));
