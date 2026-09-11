@@ -241,7 +241,7 @@ input, textarea, select {
 }
 
 .card-thumb {
-  aspect-ratio: 3 / 2;
+  aspect-ratio: 5 / 3;
   background: var(--surface-alt);
   display: flex;
 }
