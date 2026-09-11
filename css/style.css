@@ -398,6 +398,7 @@ input, textarea, select {
 .view-text-block {
   white-space: pre-wrap;
   line-height: 1.6;
+  font-size: 14px;
   color: var(--text);
   margin: 0;
 }
