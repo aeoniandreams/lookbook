@@ -1,6 +1,9 @@
 (() => {
   let allBlocks = [];
   let selection = { categoryId: CATEGORIES[0].id, subcategoryId: null }; // subcategoryId null = "전체"
+  let currentView = 'home'; // 'home' | 'category' — 로그인하면 홈이 제일 먼저 보인다
+  let homeImages = []; // [{id, url, title, link}]
+  let workingHomeImages = [];
   let editingBlockId = null;
   let currentBlockId = null;
   let workingSegments = []; // [{type:'text', id, text}] | [{type:'image', id, images:[{id,url}]}]
@@ -9,9 +12,20 @@
   const $ = sel => document.querySelector(sel);
 
   const categoryNav = $('#categoryNav');
+  const homeNavBtn = $('#homeNavBtn');
+  const contentHeader = $('#contentHeader');
   const blockGrid = $('#blockGrid');
   const emptyState = $('#emptyState');
   const breadcrumb = $('#breadcrumb');
+
+  const homeView = $('#homeView');
+  const homeMasonry = $('#homeMasonry');
+  const addHomeImageBtn = $('#addHomeImageBtn');
+  const homeEditModal = $('#homeEditModal');
+  const homeImageList = $('#homeImageList');
+  const addHomeImageRowBtn = $('#addHomeImageRowBtn');
+  const homeEditCancelBtn = $('#homeEditCancelBtn');
+  const homeEditSaveBtn = $('#homeEditSaveBtn');
   const sortDropdown = $('#sortDropdown');
   const sortDropdownBtn = $('#sortDropdownBtn');
   const sortDropdownLabel = $('#sortDropdownLabel');
@@ -105,6 +119,7 @@
     addBlockBtn.classList.toggle('hidden', !isAdmin);
     emptyAddBtn.classList.toggle('hidden', !isAdmin);
     viewActions.classList.toggle('hidden', !isAdmin);
+    addHomeImageBtn.classList.toggle('hidden', !isAdmin);
   }
 
   function syncAdminUIFromGlobal() {
@@ -415,10 +430,12 @@
 
   // ---------- 사이드바 ----------
   function renderSidebar() {
+    homeNavBtn.classList.toggle('active', currentView === 'home');
+
     categoryNav.innerHTML = '';
     CATEGORIES.forEach(cat => {
       const count = allBlocks.filter(b => cat.subs.some(s => s.id === b.subcategoryId)).length;
-      const isOpenCat = selection.categoryId === cat.id;
+      const isOpenCat = currentView === 'category' && selection.categoryId === cat.id;
 
       const catEl = document.createElement('div');
       catEl.className = 'nav-category' + (isOpenCat ? ' open' : '');
@@ -432,6 +449,7 @@
         <i data-lucide="chevron-down" class="chevron"></i>
       `;
       head.addEventListener('click', () => {
+        currentView = 'category';
         selection = { categoryId: cat.id, subcategoryId: null };
         renderSidebar();
         renderMain();
@@ -442,10 +460,11 @@
       cat.subs.forEach(sub => {
         const subCount = allBlocks.filter(b => b.subcategoryId === sub.id).length;
         const subBtn = document.createElement('button');
-        subBtn.className = 'nav-sub-item' + (selection.subcategoryId === sub.id ? ' active' : '');
+        subBtn.className = 'nav-sub-item' + (isOpenCat && selection.subcategoryId === sub.id ? ' active' : '');
         subBtn.innerHTML = `<span>${sub.name}</span><span class="cat-count">${subCount}</span>`;
         subBtn.addEventListener('click', (e) => {
           e.stopPropagation();
+          currentView = 'category';
           selection = { categoryId: cat.id, subcategoryId: sub.id };
           renderSidebar();
           renderMain();
@@ -460,6 +479,13 @@
     });
     icons();
   }
+
+  homeNavBtn.addEventListener('click', () => {
+    currentView = 'home';
+    renderSidebar();
+    renderMain();
+    closeMobileSidebar();
+  });
 
   // ---------- 메인 그리드 ----------
   function currentCategory() {
@@ -542,9 +568,183 @@
   }
 
   function renderMain() {
-    renderBreadcrumb();
-    renderGrid();
+    if (currentView === 'home') {
+      contentHeader.classList.add('hidden');
+      blockGrid.classList.add('hidden');
+      emptyState.classList.add('hidden');
+      homeView.classList.remove('hidden');
+      renderHomeView();
+    } else {
+      homeView.classList.add('hidden');
+      contentHeader.classList.remove('hidden');
+      renderBreadcrumb();
+      renderGrid();
+    }
   }
+
+  // ---------- 홈 화면 ----------
+  function homeItemViewHTML(item) {
+    const titleHTML = item.title ? escapeHTML(item.title) : '';
+    return `<div class="reference-item home-image-item" data-link="${escapeAttr(item.link || '')}">
+      <img src="${escapeAttr(item.url)}" alt="" loading="lazy">
+      ${titleHTML ? `<div class="reference-comment">${titleHTML}</div>` : ''}
+    </div>`;
+  }
+
+  function renderHomeView() {
+    homeMasonry.innerHTML = homeImages.map(homeItemViewHTML).join('');
+    icons();
+  }
+
+  homeMasonry.addEventListener('click', (e) => {
+    const item = e.target.closest('.reference-item');
+    if (!item) return;
+    // 레퍼런스 토글과 같은 모바일 두 번 탭 규칙: 코멘트(제목)가 있으면 첫
+    // 탭에서는 오버레이만 보여주고, 이미 펼쳐진 상태에서 한 번 더 탭해야
+    // 링크로 이동한다. 데스크탑은 호버로 이미 보이는 상태라 한 번 클릭으로
+    // 바로 이동한다.
+    const isMobile = window.matchMedia('(max-width: 760px)').matches;
+    const hasComment = !!item.querySelector('.reference-comment');
+    if (isMobile && hasComment && !item.classList.contains('revealed')) {
+      item.classList.add('revealed');
+      return;
+    }
+    const link = item.dataset.link;
+    if (link) window.open(link, '_blank', 'noopener,noreferrer');
+  });
+
+  function openHomeEditModal() {
+    workingHomeImages = homeImages.map(img => ({ ...img }));
+    renderHomeImageList();
+    homeEditModal.classList.remove('hidden');
+    icons();
+  }
+
+  function closeHomeEditModal() {
+    homeEditModal.classList.add('hidden');
+    workingHomeImages = [];
+  }
+
+  addHomeImageBtn.addEventListener('click', openHomeEditModal);
+  homeEditCancelBtn.addEventListener('click', closeHomeEditModal);
+  homeEditModal.querySelectorAll('[data-close-home-edit]').forEach(btn => {
+    btn.addEventListener('click', closeHomeEditModal);
+  });
+  homeEditModal.addEventListener('click', e => {
+    if (e.target === homeEditModal) closeHomeEditModal();
+  });
+
+  // 드래그로 순서 바꾸기(레퍼런스 토글 항목과 같은 방식)
+  let dragHomeImageId = null;
+
+  function reorderHomeImage(fromId, toId, after) {
+    const fromIndex = workingHomeImages.findIndex(i => i.id === fromId);
+    if (fromIndex === -1) return;
+    const [moved] = workingHomeImages.splice(fromIndex, 1);
+    let toIndex = workingHomeImages.findIndex(i => i.id === toId);
+    if (toIndex === -1) { workingHomeImages.push(moved); return; }
+    if (after) toIndex += 1;
+    workingHomeImages.splice(toIndex, 0, moved);
+  }
+
+  function buildHomeImageRow(item) {
+    const row = document.createElement('div');
+    row.className = 'reference-manage-row';
+    row.innerHTML = `
+      <span class="reference-drag-handle" draggable="true" title="드래그해서 순서 바꾸기"><i data-lucide="grip-vertical"></i></span>
+      <img class="reference-manage-thumb" src="${escapeAttr(item.url)}" alt="" onerror="this.classList.add('broken')">
+      <div class="reference-manage-fields">
+        <input type="url" class="home-url-input" placeholder="이미지 주소(URL)" value="${escapeAttr(item.url || '')}">
+        <input type="text" class="home-title-input" placeholder="제목 (호버/탭 시 표시)" value="${escapeAttr(item.title || '')}">
+        <input type="url" class="home-link-input" placeholder="이동할 링크 (선택)" value="${escapeAttr(item.link || '')}">
+      </div>
+      <button type="button" class="reference-remove-btn" title="삭제"><i data-lucide="x"></i></button>
+    `;
+    const thumb = row.querySelector('.reference-manage-thumb');
+    row.querySelector('.home-url-input').addEventListener('input', (e) => {
+      item.url = e.target.value;
+      thumb.classList.remove('broken');
+      thumb.src = item.url;
+    });
+    row.querySelector('.home-title-input').addEventListener('input', (e) => { item.title = e.target.value; });
+    row.querySelector('.home-link-input').addEventListener('input', (e) => { item.link = e.target.value; });
+    row.querySelector('.reference-remove-btn').addEventListener('click', () => {
+      workingHomeImages = workingHomeImages.filter(i => i.id !== item.id);
+      renderHomeImageList();
+    });
+
+    const handle = row.querySelector('.reference-drag-handle');
+    handle.addEventListener('dragstart', (e) => {
+      dragHomeImageId = item.id;
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', item.id);
+    });
+    handle.addEventListener('dragend', () => {
+      dragHomeImageId = null;
+      homeImageList.querySelectorAll('.reference-manage-row').forEach(r => {
+        r.classList.remove('dragging', 'drag-over-top', 'drag-over-bottom');
+      });
+    });
+    row.addEventListener('dragover', (e) => {
+      if (dragHomeImageId === null) return;
+      e.preventDefault();
+      const isAfter = (e.clientY - row.getBoundingClientRect().top) > row.offsetHeight / 2;
+      row.classList.toggle('drag-over-top', !isAfter);
+      row.classList.toggle('drag-over-bottom', isAfter);
+    });
+    row.addEventListener('dragleave', () => {
+      row.classList.remove('drag-over-top', 'drag-over-bottom');
+    });
+    row.addEventListener('drop', (e) => {
+      e.preventDefault();
+      row.classList.remove('drag-over-top', 'drag-over-bottom');
+      if (dragHomeImageId === null || dragHomeImageId === item.id) return;
+      const isAfter = (e.clientY - row.getBoundingClientRect().top) > row.offsetHeight / 2;
+      reorderHomeImage(dragHomeImageId, item.id, isAfter);
+      dragHomeImageId = null;
+      renderHomeImageList();
+    });
+
+    return row;
+  }
+
+  function renderHomeImageList() {
+    homeImageList.innerHTML = '';
+    if (!workingHomeImages.length) {
+      homeImageList.innerHTML = `<p class="hint">아직 추가된 이미지가 없어요.</p>`;
+    } else {
+      workingHomeImages.forEach(item => homeImageList.appendChild(buildHomeImageRow(item)));
+    }
+    icons();
+  }
+
+  addHomeImageRowBtn.addEventListener('click', () => {
+    workingHomeImages.push({ id: uid(), url: '', title: '', link: '' });
+    renderHomeImageList();
+  });
+
+  homeEditSaveBtn.addEventListener('click', async () => {
+    homeEditSaveBtn.disabled = true;
+    try {
+      const items = workingHomeImages
+        .filter(it => it.url && it.url.trim())
+        .map(({ id, url, title, link }) => ({
+          id,
+          url: url.trim(),
+          title: (title || '').trim(),
+          link: (link || '').trim()
+        }));
+      await LookbookFirebase.saveHomeImages(items);
+      closeHomeEditModal();
+      toast('저장했어요.');
+    } catch (err) {
+      console.error(err);
+      toast('저장에 실패했어요. 네트워크를 확인해주세요.');
+    } finally {
+      homeEditSaveBtn.disabled = false;
+    }
+  });
 
   sortDropdownBtn.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -637,6 +837,11 @@
   function closeImageLightbox() {
     imageLightbox.classList.add('hidden');
     imageLightboxImg.src = '';
+    // 모바일에서 두 번째 탭으로 원본을 열었던 항목은, 닫으면 코멘트가 가려진
+    // 처음 모습으로 되돌려놓는다.
+    viewSegments.querySelectorAll('.reference-item.revealed').forEach(el => {
+      el.classList.remove('revealed');
+    });
   }
 
   // 배경이든 이미지든 닫기 버튼이든, 라이트박스 안 어디를 눌러도 닫힌다.
@@ -1241,6 +1446,7 @@
     if (e.key !== 'Escape') return;
     if (!imageLightbox.classList.contains('hidden')) closeImageLightbox();
     else if (!adminPasswordModal.classList.contains('hidden')) closeAdminPasswordModal();
+    else if (!homeEditModal.classList.contains('hidden')) closeHomeEditModal();
     else if (!editModal.classList.contains('hidden')) closeEditModal();
     else if (!viewModal.classList.contains('hidden')) closeViewModal();
   });
@@ -1252,6 +1458,10 @@
       allBlocks = blocks;
       renderSidebar();
       renderMain();
+    });
+    LookbookFirebase.subscribeHomeImages(items => {
+      homeImages = items;
+      if (currentView === 'home') renderHomeView();
     });
   });
 })();

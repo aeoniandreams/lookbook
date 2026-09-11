@@ -97,6 +97,10 @@
       <i data-lucide="sparkles" class="brand-icon"></i>
       <span class="brand-name">aeoniandesign</span>
     </div>
+    <button type="button" id="homeNavBtn" class="nav-category-head">
+      <span class="cat-icon"><i data-lucide="house"></i></span>
+      <span class="cat-name">홈</span>
+    </button>
     <nav id="categoryNav"></nav>
     <div class="sidebar-footer">
       <button type="button" id="sidebarUsernameBtn" class="sidebar-username-btn">
@@ -138,6 +142,14 @@
         <i data-lucide="plus"></i> 첫 카드 추가하기
       </button>
     </div>
+
+    <section id="homeView" class="home-view hidden">
+      <div class="home-icon"><i data-lucide="house"></i></div>
+      <div id="homeMasonry" class="reference-masonry"></div>
+      <button type="button" id="addHomeImageBtn" class="primary-btn icon-only admin-only hidden" aria-label="홈 이미지 추가">
+        <i data-lucide="plus"></i>
+      </button>
+    </section>
   </main>
 </div>
 
@@ -208,6 +220,23 @@
       <input type="password" id="adminPasswordInput" placeholder="비밀번호" autocomplete="current-password">
       <button id="adminPasswordSubmitBtn" class="primary-btn">확인</button>
       <p id="adminPasswordError" class="auth-error hidden"></p>
+    </div>
+  </div>
+</div>
+
+<!-- 홈 화면 이미지 관리 -->
+<div id="homeEditModal" class="modal-overlay hidden">
+  <div class="modal">
+    <button class="modal-close" data-close-home-edit><i data-lucide="x"></i></button>
+    <h2>홈 이미지 관리</h2>
+    <p class="hint">이미지 주소(URL)와, 마우스를 올렸을 때(모바일은 한 번 탭했을 때) 보일 제목을 적어주세요. 링크를 적어두면 제목이 보인 상태에서 한 번 더 누르면(클릭하면) 그 링크로 새 탭이 열려요.</p>
+    <div id="homeImageList" class="reference-manage-list"></div>
+    <div class="segment-add-row">
+      <button type="button" id="addHomeImageRowBtn" class="secondary-btn"><i data-lucide="plus"></i> 이미지 추가</button>
+    </div>
+    <div class="edit-actions">
+      <button id="homeEditCancelBtn" class="secondary-btn">취소</button>
+      <button id="homeEditSaveBtn" class="primary-btn"><i data-lucide="check"></i> 저장</button>
     </div>
   </div>
 </div>

@@ -139,12 +139,27 @@ async function removeBlock(block) {
   await deleteDoc(doc(adminDb, BLOCKS_COLLECTION, block.id));
 }
 
+// ---------- 홈 화면 이미지 ----------
+// 카드처럼 여러 문서가 아니라, 순서가 있는 배열 하나를 문서 하나(home/main)에
+// 통째로 저장한다. 읽기는 공용 계정으로, 쓰기는 관리자 계정으로 나간다.
+function subscribeHomeImages(callback) {
+  return onSnapshot(doc(db, "home", "main"), (snap) => {
+    callback(snap.exists() ? snap.data().items || [] : []);
+  });
+}
+
+async function saveHomeImages(items) {
+  await setDoc(doc(adminDb, "home", "main"), { items });
+}
+
 window.LookbookFirebase = {
   signIn,
   logout,
   subscribeBlocks,
   saveBlock,
   removeBlock,
+  subscribeHomeImages,
+  saveHomeImages,
   verifyAdminPassword,
   logoutAdmin
 };
