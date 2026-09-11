@@ -588,7 +588,7 @@
     const hasTitle = !richTextIsEmpty(titleHTML);
     return `<div class="reference-item home-image-item" data-link="${escapeAttr(item.link || '')}">
       <img src="${escapeAttr(item.url)}" alt="" loading="lazy">
-      ${hasTitle ? `<div class="reference-comment">${titleHTML}</div>` : ''}
+      ${hasTitle ? `<div class="reference-comment"><div class="reference-comment-text">${titleHTML}</div></div>` : ''}
     </div>`;
   }
 
@@ -804,7 +804,7 @@
     const itemsHTML = (seg.items || []).map(item => `
       <div class="reference-item">
         <img src="${escapeAttr(item.url)}" alt="" loading="lazy">
-        ${item.comment ? `<div class="reference-comment">${escapeHTML(item.comment)}</div>` : ''}
+        ${item.comment ? `<div class="reference-comment"><div class="reference-comment-text">${escapeHTML(item.comment)}</div></div>` : ''}
       </div>
     `).join('');
     return `<div class="reference-toggle">

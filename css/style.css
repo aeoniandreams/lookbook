@@ -652,6 +652,10 @@ input, textarea, select {
   transition: opacity 0.15s ease;
 }
 .reference-comment:empty { display: none; }
+/* .reference-comment은 아래쪽 정렬을 위해 flex라서, 안에 곧바로 여러 줄
+   콘텐츠(줄바꿈 <div> 등)를 넣으면 세로로 쌓이지 않고 가로 flex 항목으로
+   나열돼버린다. 실제 텍스트는 이 안쪽 블록 요소 하나에 담아서 방지한다. */
+.reference-comment-text { width: 100%; }
 /* 데스크탑은 마우스 호버로, 모바일은 첫 탭에서 JS가 붙이는 .revealed
    클래스로 같은 오버레이를 보여준다. */
 .reference-item:hover .reference-comment,
