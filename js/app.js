@@ -65,7 +65,37 @@
 
   function icons() {
     if (window.lucide) lucide.createIcons();
+    refreshMasonryLayouts();
   }
+
+  // ---------- 레퍼런스 매소너리 컬럼 배치 ----------
+  function masonryColumnCount() {
+    return window.matchMedia('(max-width: 760px)').matches ? 2 : 3;
+  }
+
+  function layoutMasonryContainer(container) {
+    const items = [...container.querySelectorAll('.reference-item')];
+    if (!items.length) { container.innerHTML = ''; return; }
+    const columnCount = masonryColumnCount();
+    const cols = Array.from({ length: columnCount }, () => {
+      const col = document.createElement('div');
+      col.className = 'reference-masonry-col';
+      return col;
+    });
+    items.forEach((item, i) => cols[i % columnCount].appendChild(item));
+    container.innerHTML = '';
+    cols.forEach(col => container.appendChild(col));
+  }
+
+  function refreshMasonryLayouts() {
+    document.querySelectorAll('.reference-masonry').forEach(layoutMasonryContainer);
+  }
+
+  let masonryResizeTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(masonryResizeTimer);
+    masonryResizeTimer = setTimeout(refreshMasonryLayouts, 150);
+  });
 
   // lucide에 없는 아이콘을 직접 그려서 채워넣은 것 (lucide와 같은 24x24 스트로크 스타일)
   const CUSTOM_ICONS = {

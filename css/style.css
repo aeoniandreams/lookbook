@@ -622,14 +622,23 @@ input, textarea, select {
 }
 .reference-toggle.open .reference-toggle-body { display: block; }
 
+/* CSS columns는 첫 번째 칸을 세로로 다 채운 뒤 다음 칸으로 넘어가서,
+   보이는 순서가 위→아래→다음 칸이 되어버린다. 왼쪽→오른쪽으로 읽히는
+   순서를 만들기 위해 JS(refreshMasonryLayouts)가 칸 수만큼
+   .reference-masonry-col을 만들고 항목을 순서대로 나눠 넣는다. */
 .reference-masonry {
-  columns: 2;
-  column-gap: 10px;
+  display: flex;
+  gap: 10px;
+}
+.reference-masonry-col {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 .reference-item {
   position: relative;
-  break-inside: avoid;
-  margin-bottom: 10px;
   border-radius: var(--radius-sm);
   overflow: hidden;
   cursor: zoom-in;
@@ -665,9 +674,6 @@ input, textarea, select {
 .reference-item:hover img,
 .reference-item.revealed img { filter: brightness(0.6); }
 
-@media (min-width: 761px) {
-  .reference-masonry { columns: 3; }
-}
 
 /* 수정창: 레퍼런스 항목(URL + 코멘트) 관리 */
 .reference-title-input {
