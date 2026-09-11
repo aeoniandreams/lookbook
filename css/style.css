@@ -667,27 +667,6 @@ input, textarea, select {
   .reference-masonry { columns: 3; }
 }
 
-/* 홈 화면 이미지: 가로가 긴 이미지는 두 칸을 차지하게 해서, 좁은 한 칸에
-   작게 찌그러지는 대신 세로가 긴 이미지와 비슷한 크기감을 갖게 한다. CSS
-   columns로는 칸을 걸쳐 차지하는 배치가 안 되어서, 홈 화면만 grid 기반
-   메이슨리로 따로 만든다(레퍼런스 토글의 컬럼 방식은 그대로 둔다). 자동
-   배치(auto-flow)에 맡기지 않고, JS가 이미지 크기를 전부 파악한 뒤 순서와
-   무관하게 빈 칸에 제일 잘 맞는 이미지를 직접 배치(grid-column/grid-row)해
-   빈 공간을 최대한 없앤다.
-*/
-#homeMasonry {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  grid-auto-rows: 4px;
-  gap: 6px;
-}
-#homeMasonry .reference-item { margin-bottom: 0; }
-#homeMasonry .reference-item img { width: 100%; height: 100%; object-fit: cover; }
-
-@media (min-width: 761px) {
-  #homeMasonry { grid-template-columns: repeat(3, 1fr); }
-}
-
 /* 수정창: 레퍼런스 항목(URL + 코멘트) 관리 */
 .reference-title-input {
   width: 100%;

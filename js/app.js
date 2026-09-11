@@ -586,138 +586,15 @@
   function homeItemViewHTML(item) {
     const titleHTML = richTextSourceToHTML(item.title || '');
     const hasTitle = !richTextIsEmpty(titleHTML);
-    return `<div class="reference-item home-image-item" data-home-id="${escapeAttr(item.id)}" data-link="${escapeAttr(item.link || '')}">
+    return `<div class="reference-item home-image-item" data-link="${escapeAttr(item.link || '')}">
       <img src="${escapeAttr(item.url)}" alt="" loading="lazy">
       ${hasTitle ? `<div class="reference-comment"><div class="reference-comment-text">${titleHTML}</div></div>` : ''}
     </div>`;
   }
 
-  // CSS의 grid-auto-rows/gap 값과 맞춰야 한다.
-  const HOME_GRID_ROW_UNIT = 4;
-  const HOME_GRID_GAP = 6;
-
-  function currentHomeColumnCount() {
-    return window.matchMedia('(min-width: 761px)').matches ? 3 : 2;
-  }
-
-  // 순서와 무관하게, 그때그때 제일 짧은 칸에 "잘 맞는" 이미지를 골라 채워서
-  // 빈 공간을 최대한 없앤다.
-  //   - 짧은 두 칸의 높이가 정확히 같아지는 순간(=이어붙일 수 있는 지점)에만
-  //     가로로 긴 이미지(2칸 차지)를 놓는다. 안 그러면 짧은 쪽 밑에 그
-  //     차이만큼 빈 공간이 남기 때문이다.
-  //   - 그 전까지는, 세로로 긴(1칸) 이미지 중에서 지금 제일 짧은 칸을 그
-  //     다음으로 짧은 칸 높이에 최대한 가깝게 채워주는 걸 골라서 "맞춰
-  //     놓는다" — 그래야 다음에 2칸짜리를 놓을 기회가 생긴다.
-  //   - 세로 이미지가 다 떨어졌는데 맞는 지점이 없으면, 어쩔 수 없이 가로
-  //     이미지를 그냥 놓는다(약간의 빈 공간은 남을 수 있다).
-  function packHomeImages(images, colCount) {
-    const colHeights = new Array(colCount).fill(0);
-    const wide = images.filter(i => i.isWide).slice();
-    const narrow = images.filter(i => !i.isWide).slice();
-    const placements = [];
-
-    function shortestCol() {
-      let idx = 0;
-      for (let i = 1; i < colHeights.length; i++) {
-        if (colHeights[i] < colHeights[idx]) idx = i;
-      }
-      return idx;
-    }
-
-    function wideWindowFor(col) {
-      if (colCount <= 2) return [0, 1];
-      if (col === 0) return [0, 1];
-      if (col === colCount - 1) return [colCount - 2, colCount - 1];
-      return colHeights[col - 1] <= colHeights[col + 1] ? [col - 1, col] : [col, col + 1];
-    }
-
-    function placeWide(window, rowStartOverride) {
-      wide.sort((a, b) => b.rowSpan - a.rowSpan);
-      const item = wide.shift();
-      const rowStart = rowStartOverride != null ? rowStartOverride : Math.max(colHeights[window[0]], colHeights[window[1]]);
-      placements.push({ id: item.id, colStart: window[0], colSpan: 2, rowStart, rowSpan: item.rowSpan });
-      colHeights[window[0]] = rowStart + item.rowSpan;
-      colHeights[window[1]] = rowStart + item.rowSpan;
-    }
-
-    while (wide.length || narrow.length) {
-      const col = shortestCol();
-      const window = wideWindowFor(col);
-      const tie = colHeights[window[0]] === colHeights[window[1]];
-
-      if (tie && wide.length) {
-        placeWide(window, colHeights[window[0]]);
-      } else if (narrow.length) {
-        const sortedHeights = [...colHeights].sort((a, b) => a - b);
-        const target = sortedHeights.length > 1 ? sortedHeights[1] - colHeights[col] : 0;
-        narrow.sort((a, b) => Math.abs(a.rowSpan - target) - Math.abs(b.rowSpan - target));
-        const item = narrow.shift();
-        const rowStart = colHeights[col];
-        placements.push({ id: item.id, colStart: col, colSpan: 1, rowStart, rowSpan: item.rowSpan });
-        colHeights[col] = rowStart + item.rowSpan;
-      } else {
-        placeWide(window);
-      }
-    }
-    return placements;
-  }
-
-  function layoutHomeMasonry() {
-    const loaded = [...homeMasonry.querySelectorAll('.reference-item')]
-      .map(el => ({ el, img: el.querySelector('img') }))
-      .filter(({ img }) => img && img.naturalWidth && img.naturalHeight);
-    if (!loaded.length) return;
-
-    const containerWidth = homeMasonry.getBoundingClientRect().width;
-    if (!containerWidth) return;
-    const colCount = currentHomeColumnCount();
-    const narrowColWidth = (containerWidth - (colCount - 1) * HOME_GRID_GAP) / colCount;
-    const wideColWidth = narrowColWidth * 2 + HOME_GRID_GAP;
-
-    const images = loaded.map(({ el, img }) => {
-      const isWide = img.naturalWidth > img.naturalHeight;
-      const renderWidth = isWide ? wideColWidth : narrowColWidth;
-      const renderHeight = renderWidth * (img.naturalHeight / img.naturalWidth);
-      const rowSpan = Math.max(1, Math.ceil((renderHeight + HOME_GRID_GAP) / (HOME_GRID_ROW_UNIT + HOME_GRID_GAP)));
-      return { id: el.dataset.homeId, isWide, rowSpan };
-    });
-
-    const placementById = new Map(packHomeImages(images, colCount).map(p => [p.id, p]));
-    loaded.forEach(({ el }) => {
-      const p = placementById.get(el.dataset.homeId);
-      if (!p) return;
-      el.style.gridColumn = `${p.colStart + 1} / span ${p.colSpan}`;
-      el.style.gridRow = `${p.rowStart + 1} / span ${p.rowSpan}`;
-      el.classList.toggle('home-wide', p.colSpan === 2);
-    });
-  }
-
-  let homeMasonryResizeTimer = null;
-  window.addEventListener('resize', () => {
-    if (homeView.classList.contains('hidden')) return;
-    clearTimeout(homeMasonryResizeTimer);
-    homeMasonryResizeTimer = setTimeout(layoutHomeMasonry, 150);
-  });
-
   function renderHomeView() {
     homeMasonry.innerHTML = homeImages.map(homeItemViewHTML).join('');
     icons();
-    const imgs = [...homeMasonry.querySelectorAll('img')];
-    if (!imgs.length) return;
-    // 전체 이미지 크기를 다 알아야 순서 무관하게 배치를 계산할 수 있어서,
-    // 하나씩 배치하지 않고 전부 로드(또는 실패)된 뒤 한 번에 계산한다.
-    let pending = imgs.length;
-    const onOneSettled = () => {
-      pending -= 1;
-      if (pending <= 0) layoutHomeMasonry();
-    };
-    imgs.forEach(img => {
-      if (img.complete) onOneSettled();
-      else {
-        img.addEventListener('load', onOneSettled, { once: true });
-        img.addEventListener('error', onOneSettled, { once: true });
-      }
-    });
   }
 
   homeMasonry.addEventListener('click', (e) => {
