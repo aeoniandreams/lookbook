@@ -58,6 +58,19 @@ async function signIn(password) {
   await signInWithEmailAndPassword(auth, AUTH_EMAIL, password);
 }
 
+async function logout() {
+  // 관리자 세션도 같이 로그아웃해서, 다음에 다시 입장했을 때 비밀번호도
+  // 입력하지 않았는데 관리자 모드로 남아있는 일이 없게 한다.
+  await signOut(auth);
+  if (adminAuth) {
+    try {
+      await signOut(adminAuth);
+    } catch (err) {
+      console.error("[Lookbook] 관리자 세션 로그아웃 실패:", err);
+    }
+  }
+}
+
 function subscribeBlocks(callback) {
   return onSnapshot(collection(db, BLOCKS_COLLECTION), (snapshot) => {
     callback(snapshot.docs.map((d) => ({ id: d.id, ...d.data() })));
@@ -120,6 +133,7 @@ async function removeBlock(block) {
 
 window.LookbookFirebase = {
   signIn,
+  logout,
   subscribeBlocks,
   saveBlock,
   removeBlock,

@@ -39,6 +39,7 @@
 
   const sidebarUsernameBtn = $('#sidebarUsernameBtn');
   const sidebarAdminBadge = $('#sidebarAdminBadge');
+  const sidebarLogoutBtn = $('#sidebarLogoutBtn');
   const adminPasswordModal = $('#adminPasswordModal');
   const adminPasswordInput = $('#adminPasswordInput');
   const adminPasswordError = $('#adminPasswordError');
@@ -166,6 +167,10 @@
   adminPasswordSubmitBtn.addEventListener('click', trySubmitAdminPassword);
   adminPasswordInput.addEventListener('keydown', e => {
     if (e.key === 'Enter') trySubmitAdminPassword();
+  });
+
+  sidebarLogoutBtn.addEventListener('click', () => {
+    LookbookFirebase.logout();
   });
 
   applyAdminUI();
