@@ -187,7 +187,13 @@
   });
 
   sidebarLogoutBtn.addEventListener('click', () => {
-    LookbookFirebase.logout();
+    // 관리자 모드에서는 먼저 유저 모드로만 내려가고, 유저 모드에서 한 번 더
+    // 눌러야 실제로 로그인 화면까지 나간다.
+    if (isAdmin) {
+      LookbookFirebase.logoutAdmin();
+    } else {
+      LookbookFirebase.logout();
+    }
   });
 
   applyAdminUI();
