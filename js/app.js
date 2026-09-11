@@ -23,6 +23,9 @@
   const viewMeta = $('#viewMeta');
   const viewTitle = $('#viewTitle');
 
+  const imageLightbox = $('#imageLightbox');
+  const imageLightboxImg = $('#imageLightboxImg');
+
   const editModal = $('#editModal');
   const editModalTitle = $('#editModalTitle');
   const editCategorySelect = $('#editCategorySelect');
@@ -626,9 +629,28 @@
     viewModal.dataset.blockId = '';
   }
 
+  function openImageLightbox(url) {
+    imageLightboxImg.src = url;
+    imageLightbox.classList.remove('hidden');
+  }
+
+  function closeImageLightbox() {
+    imageLightbox.classList.add('hidden');
+    imageLightboxImg.src = '';
+  }
+
+  // 배경이든 이미지든 닫기 버튼이든, 라이트박스 안 어디를 눌러도 닫힌다.
+  imageLightbox.addEventListener('click', closeImageLightbox);
+
   $('[data-close-view]').addEventListener('click', closeViewModal);
   viewModal.addEventListener('click', e => {
     if (e.target === viewModal) { closeViewModal(); return; }
+    const refItem = e.target.closest('.reference-item');
+    if (refItem) {
+      const img = refItem.querySelector('img');
+      if (img) openImageLightbox(img.src);
+      return;
+    }
     const header = e.target.closest('.text-toggle-header, .reference-toggle-header');
     if (header) {
       header.closest('.text-toggle, .reference-toggle').classList.toggle('open');
@@ -1207,7 +1229,8 @@
   // 키보드로 모달 닫기
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
-    if (!adminPasswordModal.classList.contains('hidden')) closeAdminPasswordModal();
+    if (!imageLightbox.classList.contains('hidden')) closeImageLightbox();
+    else if (!adminPasswordModal.classList.contains('hidden')) closeAdminPasswordModal();
     else if (!editModal.classList.contains('hidden')) closeEditModal();
     else if (!viewModal.classList.contains('hidden')) closeViewModal();
   });

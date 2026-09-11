@@ -501,6 +501,27 @@ input, textarea, select {
 .modal-sm { max-width: 320px; padding: 32px 24px 24px; }
 .modal-sm .auth-box svg { color: var(--accent); }
 
+/* ---------- 이미지 원본 보기(라이트박스) ---------- */
+.image-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 12, 25, 0.75);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 200;
+  cursor: zoom-out;
+}
+.image-lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+}
+.image-lightbox .modal-close { color: #fff; }
+.image-lightbox .modal-close:hover { color: rgba(255, 255, 255, 0.7); }
+
 /* ---------- 상세 보기 ---------- */
 .view-meta {
   font-size: 12px;
@@ -588,6 +609,7 @@ input, textarea, select {
   margin-bottom: 10px;
   border-radius: var(--radius-sm);
   overflow: hidden;
+  cursor: zoom-in;
 }
 .reference-item img {
   width: 100%;
