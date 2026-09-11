@@ -627,7 +627,7 @@ input, textarea, select {
 .reference-item {
   position: relative;
   break-inside: avoid;
-  margin-bottom: 6px;
+  margin-bottom: 10px;
   border-radius: var(--radius-sm);
   overflow: hidden;
   cursor: zoom-in;
