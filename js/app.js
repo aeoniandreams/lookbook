@@ -81,10 +81,12 @@
 
   // ---------- 관리자 모드 ----------
   // 카드 추가/수정/삭제는 관리자 모드에서만 할 수 있다. 관리자 여부는
-  // localStorage에 저장해서 새로고침/재방문해도 유지되고, 사이드바 하단의
+  // firebase-init.js의 별도 관리자 로그인 세션이 실제로 있는지로 정해진다
+  // (그 세션으로 로그인되어 있어야 Firestore 쓰기가 허용되므로, 여기 UI
+  // 상태를 흉내내는 것만으로는 저장/삭제가 통과하지 않는다). 그 세션은
+  // 브라우저에 저장돼서 새로고침/재방문해도 유지되고, 사이드바 하단의
   // 아이디를 눌러 전환한다.
-  const ADMIN_STORAGE_KEY = 'lookbook_admin';
-  let isAdmin = localStorage.getItem(ADMIN_STORAGE_KEY) === '1';
+  let isAdmin = false;
 
   function applyAdminUI() {
     sidebarAdminBadge.classList.toggle('hidden', !isAdmin);
@@ -93,11 +95,20 @@
     viewActions.classList.toggle('hidden', !isAdmin);
   }
 
-  function setAdminMode(next) {
-    isAdmin = next;
-    localStorage.setItem(ADMIN_STORAGE_KEY, isAdmin ? '1' : '0');
-    applyAdminUI();
+  function syncAdminUIFromGlobal() {
+    if (window.__adminAuthState !== null && window.__adminAuthState !== undefined) {
+      isAdmin = !!window.__adminAuthState;
+      applyAdminUI();
+    }
   }
+
+  // firebase-init.js가 이 이벤트를 이미 쏜 뒤에 이 코드가 실행됐을 수도
+  // 있으니, 구독을 걸자마자 마지막으로 알려진 상태로 한 번 맞춰준다.
+  window.addEventListener('admin-auth-changed', (e) => {
+    isAdmin = !!(e.detail && e.detail.isAdmin);
+    applyAdminUI();
+  });
+  syncAdminUIFromGlobal();
 
   function openAdminPasswordModal() {
     adminPasswordInput.value = '';
@@ -118,7 +129,7 @@
     try {
       const ok = await LookbookFirebase.verifyAdminPassword(password);
       if (ok) {
-        setAdminMode(true);
+        // 실제 관리자 로그인이 곧 admin-auth-changed 이벤트로 UI에 반영된다.
         closeAdminPasswordModal();
         toast('관리자 모드로 전환됐어요.');
       } else {
@@ -137,9 +148,10 @@
   sidebarUsernameBtn.addEventListener('click', () => {
     if (isAdmin) {
       // 토스트 메시지(2200ms 후 자동으로 사라짐)와 맞춰서, 메시지가 사라지는
-      // 시점에 실제로 유저 모드로 전환한다.
+      // 시점에 실제로 관리자 세션을 로그아웃한다(그 결과가 admin-auth-changed
+      // 이벤트로 돌아와 UI를 유저 모드로 되돌린다).
       toast('유저 모드로 전환됩니다');
-      setTimeout(() => setAdminMode(false), 2200);
+      setTimeout(() => { LookbookFirebase.logoutAdmin(); }, 2200);
     } else {
       openAdminPasswordModal();
     }

@@ -64,35 +64,58 @@ function subscribeBlocks(callback) {
   });
 }
 
-async function saveBlock(block) {
-  await setDoc(doc(db, BLOCKS_COLLECTION, block.id), block);
-}
-
-async function removeBlock(block) {
-  await deleteDoc(doc(db, BLOCKS_COLLECTION, block.id));
-}
-
-// ---------- 관리자 모드 비밀번호 확인 ----------
-// 관리자 비밀번호 확인 전용 보조 Firebase 앱 인스턴스. 메인 로그인 세션(위
-// app/auth)과 완전히 분리되어 있어서, 비밀번호가 맞는지 확인하는 동안에도
-// 실제 로그인 상태는 전혀 바뀌지 않는다.
-let adminCheckAuth;
+// ---------- 관리자 계정(쓰기 전용) ----------
+// 카드 저장/삭제는 이 별도의 관리자 계정 세션을 통해서만 나간다. 위 공용
+// 계정(auth/db)과는 완전히 분리된 두 번째 Firebase 앱 인스턴스라서, 관리자
+// 모드가 아닐 때는 이 세션이 로그인되어 있지 않고, Firestore 보안 규칙이
+// 이 계정(ADMIN_EMAIL)에게만 쓰기를 허용하도록 되어 있으면 개발자 도구로
+// 저장 함수를 직접 호출해도 Firestore가 거부한다. 새로고침해도 관리자
+// 모드가 유지되도록 이 세션도 브라우저에 저장해둔다.
+let adminApp, adminAuth, adminDb;
 try {
-  const adminCheckApp = initializeApp(window.FIREBASE_CONFIG, "adminCheck");
-  adminCheckAuth = getAuth(adminCheckApp);
+  adminApp = initializeApp(window.FIREBASE_CONFIG, "admin");
+  adminAuth = getAuth(adminApp);
+  adminDb = getFirestore(adminApp);
 } catch (err) {
-  console.error("[Lookbook] 관리자 확인용 보조 앱 초기화에 실패했어요:", err);
+  console.error("[Lookbook] 관리자 계정용 보조 앱 초기화에 실패했어요:", err);
 }
 
 async function verifyAdminPassword(password) {
-  if (!adminCheckAuth || !ADMIN_EMAIL || !password) return false;
+  if (!adminAuth || !ADMIN_EMAIL || !password) return false;
   try {
-    await signInWithEmailAndPassword(adminCheckAuth, ADMIN_EMAIL, password);
-    await signOut(adminCheckAuth);
+    await setPersistence(adminAuth, browserLocalPersistence);
+    await signInWithEmailAndPassword(adminAuth, ADMIN_EMAIL, password);
     return true;
   } catch (err) {
     return false;
   }
+}
+
+async function logoutAdmin() {
+  if (!adminAuth) return;
+  try {
+    await signOut(adminAuth);
+  } catch (err) {
+    console.error("[Lookbook] 관리자 로그아웃에 실패했어요:", err);
+  }
+}
+
+// app.js가 이 이벤트를 늦게 구독하더라도 놓치지 않도록, 마지막 상태를
+// window에도 같이 남겨둔다(app.js는 구독 직후 이 값으로 한 번 동기화한다).
+window.__adminAuthState = null; // null = 아직 확인 전
+if (adminAuth) {
+  onAuthStateChanged(adminAuth, (user) => {
+    window.__adminAuthState = !!user;
+    window.dispatchEvent(new CustomEvent("admin-auth-changed", { detail: { isAdmin: !!user } }));
+  });
+}
+
+async function saveBlock(block) {
+  await setDoc(doc(adminDb, BLOCKS_COLLECTION, block.id), block);
+}
+
+async function removeBlock(block) {
+  await deleteDoc(doc(adminDb, BLOCKS_COLLECTION, block.id));
 }
 
 window.LookbookFirebase = {
@@ -100,7 +123,8 @@ window.LookbookFirebase = {
   subscribeBlocks,
   saveBlock,
   removeBlock,
-  verifyAdminPassword
+  verifyAdminPassword,
+  logoutAdmin
 };
 
 // ---------- 비밀번호 입장 화면 동작 ----------
