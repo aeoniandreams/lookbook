@@ -533,6 +533,7 @@ input, textarea, select {
 .view-text-block .rt-gray { color: var(--text-muted); }
 .view-text-block .rt-accent { color: var(--accent); }
 .view-text-block .rt-red { color: var(--danger); }
+.view-text-block img { max-width: 100%; border-radius: var(--radius-sm); display: block; margin: 8px 0; }
 .rt-icon {
   display: inline-flex;
   vertical-align: -0.2em;
@@ -557,6 +558,126 @@ input, textarea, select {
   line-height: 1.6;
 }
 .text-toggle.open .toggle-body { display: block; }
+
+/* ---------- 레퍼런스 토글 (메이슨리 레이아웃 + 코멘트) ---------- */
+.reference-toggle { margin: 4px 0; }
+.reference-toggle-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  font-weight: 600;
+  cursor: pointer;
+}
+.reference-toggle:not(.open) .toggle-chevron-open { display: none; }
+.reference-toggle.open .toggle-chevron-closed { display: none; }
+.reference-toggle-body {
+  display: none;
+  padding: 8px 0 4px 21px;
+}
+.reference-toggle.open .reference-toggle-body { display: block; }
+
+.reference-masonry {
+  columns: 2;
+  column-gap: 10px;
+}
+.reference-item {
+  position: relative;
+  break-inside: avoid;
+  margin-bottom: 10px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--surface-alt);
+}
+.reference-item img {
+  width: 100%;
+  display: block;
+  transition: filter 0.15s ease;
+}
+.reference-comment {
+  font-size: 12px;
+  color: var(--text-muted);
+  padding: 6px 8px;
+  line-height: 1.4;
+}
+.reference-comment:empty { display: none; }
+
+@media (min-width: 761px) {
+  .reference-masonry { columns: 3; }
+  .reference-comment {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: flex-end;
+    padding: 12px;
+    color: #fff;
+    background: linear-gradient(to top, rgba(20, 16, 35, 0.75), transparent 65%);
+    opacity: 0;
+    transition: opacity 0.15s ease;
+  }
+  .reference-item:hover .reference-comment { opacity: 1; }
+  .reference-item:hover img { filter: brightness(0.6); }
+}
+
+/* 수정창: 레퍼런스 항목(URL + 코멘트) 관리 */
+.reference-title-input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  margin-bottom: 10px;
+}
+.reference-title-input:focus { outline: none; border-color: var(--accent); }
+.reference-manage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.reference-manage-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+}
+.reference-manage-thumb {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: 7px;
+  background: var(--surface-alt);
+}
+.reference-manage-thumb.broken { visibility: hidden; }
+.reference-manage-fields {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.reference-manage-fields input {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg);
+  font-size: 13px;
+}
+.reference-manage-fields input:focus { outline: none; border-color: var(--accent); }
+.reference-remove-btn {
+  flex-shrink: 0;
+  width: 30px; height: 30px;
+  border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted);
+}
+.reference-remove-btn:hover { background: var(--surface-alt); color: var(--danger); }
+.reference-remove-btn svg { width: 14px; height: 14px; }
 
 .gallery-row { display: flex; gap: 8px; }
 .gallery-row img {
@@ -797,6 +918,7 @@ input, textarea, select {
 .segment-editable .rt-gray { color: var(--text-muted); }
 .segment-editable .rt-accent { color: var(--accent); }
 .segment-editable .rt-red { color: var(--danger); }
+.segment-editable img { max-width: 100%; border-radius: var(--radius-sm); display: block; margin: 8px 0; }
 
 .segment-add-row { display: flex; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
 

@@ -31,6 +31,7 @@
   const editSegmentList = $('#editSegmentList');
   const addTextSegmentBtn = $('#addTextSegmentBtn');
   const addImageSegmentBtn = $('#addImageSegmentBtn');
+  const addReferenceSegmentBtn = $('#addReferenceSegmentBtn');
   const editSaveBtn = $('#editSaveBtn');
 
   const addBlockBtn = $('#addBlockBtn');
@@ -78,6 +79,13 @@
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  // escapeHTML은 텍스트 노드 기준이라 따옴표를 안 바꿔준다. 속성값
+  // (src="...") 안에 넣을 때는 따옴표도 이스케이프해야 값이 중간에 끊기지
+  // 않는다.
+  function escapeAttr(str) {
+    return escapeHTML(str).replace(/"/g, '&quot;');
   }
 
   // ---------- 관리자 모드 ----------
@@ -204,13 +212,14 @@
   const RICH_TEXT_ICONS = CATEGORIES.map(c => c.icon);
 
   const RICH_ALLOWED_TAGS = new Set([
-    'B', 'I', 'STRIKE', 'SPAN', 'DIV', 'BR',
+    'B', 'I', 'STRIKE', 'SPAN', 'DIV', 'BR', 'IMG',
     'SVG', 'PATH', 'CIRCLE', 'G', 'DEFS', 'CLIPPATH'
   ]);
   const RICH_ALLOWED_ATTRS = {
     SPAN: ['class'],
     DIV: ['class'],
     I: ['data-lucide', 'class'],
+    IMG: ['src', 'alt'],
     SVG: ['viewbox', 'fill', 'stroke', 'stroke-width', 'stroke-linecap', 'stroke-linejoin', 'class'],
     PATH: ['d'],
     CIRCLE: ['cx', 'cy', 'r'],
@@ -341,7 +350,7 @@
     if (!html) return true;
     const div = document.createElement('div');
     div.innerHTML = html;
-    if (div.querySelector('svg, i[data-lucide]')) return false;
+    if (div.querySelector('svg, i[data-lucide], img')) return false;
     return !div.textContent.trim();
   }
 
@@ -566,9 +575,30 @@
   });
 
   // ---------- 상세 보기 모달 ----------
+  function referenceToggleViewHTML(seg) {
+    const titleHTML = escapeHTML((seg.title || '').trim() || '레퍼런스');
+    const itemsHTML = (seg.items || []).map(item => `
+      <div class="reference-item">
+        <img src="${escapeAttr(item.url)}" alt="" loading="lazy">
+        ${item.comment ? `<div class="reference-comment">${escapeHTML(item.comment)}</div>` : ''}
+      </div>
+    `).join('');
+    return `<div class="reference-toggle">
+      <div class="reference-toggle-header">
+        <i data-lucide="chevrons-right" class="toggle-chevron toggle-chevron-closed"></i>
+        <i data-lucide="chevrons-down" class="toggle-chevron toggle-chevron-open"></i>
+        <span class="toggle-title">${titleHTML}</span>
+      </div>
+      <div class="reference-toggle-body"><div class="reference-masonry">${itemsHTML}</div></div>
+    </div>`;
+  }
+
   function segmentViewHTML(seg) {
     if (seg.type === 'text') {
       return `<div class="view-text-block">${richTextViewHTML(seg.text || '')}</div>`;
+    }
+    if (seg.type === 'reference') {
+      return referenceToggleViewHTML(seg);
     }
     const cls = seg.images.length > 1 ? 'gallery-row multi' : 'gallery-row single';
     return `<div class="${cls}">${seg.images.map(img => `<img src="${img.url}" alt="" loading="lazy">`).join('')}</div>`;
@@ -599,9 +629,9 @@
   $('[data-close-view]').addEventListener('click', closeViewModal);
   viewModal.addEventListener('click', e => {
     if (e.target === viewModal) { closeViewModal(); return; }
-    const header = e.target.closest('.text-toggle-header');
+    const header = e.target.closest('.text-toggle-header, .reference-toggle-header');
     if (header) {
-      header.closest('.text-toggle').classList.toggle('open');
+      header.closest('.text-toggle, .reference-toggle').classList.toggle('open');
     }
   });
 
@@ -655,9 +685,18 @@
     editModalTitle.textContent = block ? '카드 수정' : '새 카드 추가';
     editTitleInput.value = block ? block.title || '' : '';
     workingSegments = block
-      ? migrateBlockToSegments(block).map(seg => seg.type === 'text'
-        ? { type: 'text', id: seg.id, text: seg.text || '' }
-        : { type: 'image', id: seg.id, images: seg.images.map(img => ({ id: img.id, url: img.url })) })
+      ? migrateBlockToSegments(block).map(seg => {
+        if (seg.type === 'text') return { type: 'text', id: seg.id, text: seg.text || '' };
+        if (seg.type === 'reference') {
+          return {
+            type: 'reference',
+            id: seg.id,
+            title: seg.title || '',
+            items: (seg.items || []).map(it => ({ id: it.id, url: it.url, comment: it.comment || '' }))
+          };
+        }
+        return { type: 'image', id: seg.id, images: seg.images.map(img => ({ id: img.id, url: img.url })) };
+      })
       : [];
     workingThumbnailIds = block ? [...(block.thumbnailIds || [])] : [];
 
@@ -708,8 +747,14 @@
     renderSegmentList();
   }
 
+  function addReferenceSegment() {
+    workingSegments.push({ type: 'reference', id: uid(), title: '', items: [] });
+    renderSegmentList();
+  }
+
   addTextSegmentBtn.addEventListener('click', addTextSegment);
   addImageSegmentBtn.addEventListener('click', addImageSegment);
+  addReferenceSegmentBtn.addEventListener('click', addReferenceSegment);
 
   function moveSegment(index, dir) {
     const target = index + dir;
@@ -759,6 +804,33 @@
     return cell;
   }
 
+  function buildReferenceItemRow(item, seg) {
+    const row = document.createElement('div');
+    row.className = 'reference-manage-row';
+    row.innerHTML = `
+      <img class="reference-manage-thumb" src="${escapeAttr(item.url)}" alt="" onerror="this.classList.add('broken')">
+      <div class="reference-manage-fields">
+        <input type="url" class="reference-url-input" placeholder="이미지 주소(URL)" value="${escapeAttr(item.url || '')}">
+        <input type="text" class="reference-comment-input" placeholder="코멘트 (선택)" value="${escapeAttr(item.comment || '')}">
+      </div>
+      <button type="button" class="reference-remove-btn" title="삭제"><i data-lucide="x"></i></button>
+    `;
+    const thumb = row.querySelector('.reference-manage-thumb');
+    row.querySelector('.reference-url-input').addEventListener('input', (e) => {
+      item.url = e.target.value;
+      thumb.classList.remove('broken');
+      thumb.src = item.url;
+    });
+    row.querySelector('.reference-comment-input').addEventListener('input', (e) => {
+      item.comment = e.target.value;
+    });
+    row.querySelector('.reference-remove-btn').addEventListener('click', () => {
+      seg.items = seg.items.filter(i => i.id !== item.id);
+      renderSegmentList();
+    });
+    return row;
+  }
+
   function buildRichTextToolbar(editable) {
     const toolbar = document.createElement('div');
     toolbar.className = 'rt-toolbar';
@@ -777,6 +849,7 @@
           ${RICH_TEXT_ICONS.map(name => `<button type="button" class="rt-icon-option" data-icon="${name}">${iconHTML(name)}</button>`).join('')}
         </div>
       </div>
+      <button type="button" class="rt-btn" data-insert-image title="이미지 삽입"><i data-lucide="image"></i></button>
       <button type="button" class="rt-btn" data-toggle-insert title="토글(펼침/접힘) 삽입"><i data-lucide="chevron-right"></i></button>
     `;
 
@@ -816,6 +889,21 @@
       });
     });
 
+    toolbar.querySelector('[data-insert-image]').addEventListener('click', () => {
+      const url = window.prompt('이미지 URL을 입력하세요');
+      if (!url) return;
+      const trimmed = url.trim();
+      if (!trimmed || /^\s*javascript:/i.test(trimmed)) return;
+      editable.focus();
+      // src는 DOM 프로퍼티로 설정한 뒤 outerHTML로 꺼내서, 값 안에 따옴표 등이
+      // 있어도 속성이 중간에 끊기지 않고 항상 안전하게 이스케이프되게 한다.
+      const img = document.createElement('img');
+      img.src = trimmed;
+      img.alt = '';
+      document.execCommand('insertHTML', false, img.outerHTML + '<div><br></div>');
+      editable.dispatchEvent(new Event('input'));
+    });
+
     toolbar.querySelector('[data-toggle-insert]').addEventListener('click', () => {
       editable.focus();
       document.execCommand('insertHTML', false, buildToggleHTML('제목', '내용', true) + '<div><br></div>');
@@ -831,12 +919,15 @@
     const box = document.createElement('div');
     box.className = 'segment-box';
 
+    const typeIcon = seg.type === 'text' ? 'type' : (seg.type === 'reference' ? 'chevrons-right' : 'image');
+    const typeLabel = seg.type === 'text' ? '텍스트' : (seg.type === 'reference' ? '레퍼런스 토글' : '이미지');
+
     const header = document.createElement('div');
     header.className = 'segment-box-header';
     header.innerHTML = `
       <span class="segment-type-label">
-        <i data-lucide="${seg.type === 'text' ? 'type' : 'image'}"></i>
-        ${seg.type === 'text' ? '텍스트' : '이미지'}
+        <i data-lucide="${typeIcon}"></i>
+        ${typeLabel}
       </span>
       <div class="segment-controls">
         <button type="button" class="seg-btn seg-up" title="위로"><i data-lucide="chevron-up"></i></button>
@@ -865,6 +956,33 @@
 
       box.appendChild(buildRichTextToolbar(editable));
       box.appendChild(editable);
+    } else if (seg.type === 'reference') {
+      const titleInput = document.createElement('input');
+      titleInput.type = 'text';
+      titleInput.className = 'reference-title-input';
+      titleInput.placeholder = '토글 제목 (기본: 레퍼런스)';
+      titleInput.value = seg.title || '';
+      titleInput.addEventListener('input', () => { seg.title = titleInput.value; });
+      box.appendChild(titleInput);
+
+      const list = document.createElement('div');
+      list.className = 'reference-manage-list';
+      if (!seg.items.length) {
+        list.innerHTML = `<p class="hint">아직 추가된 이미지가 없어요.</p>`;
+      } else {
+        seg.items.forEach(item => list.appendChild(buildReferenceItemRow(item, seg)));
+      }
+      box.appendChild(list);
+
+      const addItemBtn = document.createElement('button');
+      addItemBtn.type = 'button';
+      addItemBtn.className = 'secondary-btn';
+      addItemBtn.innerHTML = `<i data-lucide="plus"></i> 이미지 추가`;
+      addItemBtn.addEventListener('click', () => {
+        seg.items.push({ id: uid(), url: '', comment: '' });
+        renderSegmentList();
+      });
+      box.appendChild(addItemBtn);
     } else {
       const urlRow = document.createElement('div');
       urlRow.className = 'image-url-row';
@@ -928,10 +1046,25 @@
 
     try {
       const segments = workingSegments
-        .filter(seg => (seg.type === 'text' ? !richTextIsEmpty(seg.text) : seg.images.length))
-        .map(seg => seg.type === 'text'
-          ? { type: 'text', id: seg.id, text: sanitizeRichHTML(seg.text || '') }
-          : { type: 'image', id: seg.id, images: seg.images.map(({ id, url }) => ({ id, url })) });
+        .filter(seg => {
+          if (seg.type === 'text') return !richTextIsEmpty(seg.text);
+          if (seg.type === 'reference') return seg.items.some(it => it.url && it.url.trim());
+          return seg.images.length;
+        })
+        .map(seg => {
+          if (seg.type === 'text') return { type: 'text', id: seg.id, text: sanitizeRichHTML(seg.text || '') };
+          if (seg.type === 'reference') {
+            return {
+              type: 'reference',
+              id: seg.id,
+              title: (seg.title || '').trim(),
+              items: seg.items
+                .filter(it => it.url && it.url.trim())
+                .map(({ id, url, comment }) => ({ id, url: url.trim(), comment: (comment || '').trim() }))
+            };
+          }
+          return { type: 'image', id: seg.id, images: seg.images.map(({ id, url }) => ({ id, url })) };
+        });
 
       const savedImageIds = segments.filter(s => s.type === 'image').flatMap(s => s.images.map(img => img.id));
 
