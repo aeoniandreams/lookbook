@@ -247,7 +247,7 @@ input, textarea, select {
   color: var(--text);
   cursor: pointer;
 }
-.sort-dropdown-option:hover { background: var(--accent-soft); }
+.sort-dropdown-option:hover { background: var(--surface-alt); }
 .sort-dropdown-option.active { background: var(--accent); color: #fff; font-weight: 600; }
 
 /* ---------- 버튼 ---------- */
