@@ -566,6 +566,7 @@ input, textarea, select {
   align-items: center;
   gap: 6px;
   padding: 4px 0;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
 }
@@ -587,11 +588,11 @@ input, textarea, select {
   margin-bottom: 10px;
   border-radius: var(--radius-sm);
   overflow: hidden;
-  background: var(--surface-alt);
 }
 .reference-item img {
   width: 100%;
   display: block;
+  background: var(--surface-alt);
   transition: filter 0.15s ease;
 }
 .reference-comment {
@@ -599,6 +600,9 @@ input, textarea, select {
   color: var(--text-muted);
   padding: 6px 8px;
   line-height: 1.4;
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 var(--radius-sm) var(--radius-sm);
 }
 .reference-comment:empty { display: none; }
 
@@ -614,6 +618,8 @@ input, textarea, select {
     background: linear-gradient(to top, rgba(20, 16, 35, 0.75), transparent 65%);
     opacity: 0;
     transition: opacity 0.15s ease;
+    border: none;
+    border-radius: 0;
   }
   .reference-item:hover .reference-comment { opacity: 1; }
   .reference-item:hover img { filter: brightness(0.6); }
