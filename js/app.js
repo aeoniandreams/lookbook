@@ -138,7 +138,7 @@
       case 'auth/invalid-credential':
       case 'auth/wrong-password':
       case 'auth/user-not-found':
-        return '비밀번호가 올바르지 않아요. (관리자 계정 자체가 없어도 이 메시지가 떠요 — Firebase 콘솔 Authentication에 그 이메일 계정이 실제로 있는지 확인해보세요)';
+        return '비밀번호가 올바르지 않아요.';
       case 'auth/too-many-requests':
         return '시도가 너무 많아요. 잠시 후 다시 시도해주세요.';
       case 'auth/network-request-failed':
