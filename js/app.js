@@ -418,10 +418,44 @@
       span.appendChild(content);
       range.insertNode(span);
     }
+    // surroundContents는 선택 범위가 텍스트 전체를 덮을 때 빈 문자열의
+    // 앞/뒤 텍스트 노드를 형제로 남긴다. 이 노드들이 남아있으면 나중에
+    // 전체 선택(Ctrl+A) 시 선택 범위가 span 밖으로 걸쳐져, 같은 버튼을
+    // 다시 눌러 색을 빼는 토글이 span을 못 찾게 된다 — normalize로 정리.
+    editable.normalize();
     sel.removeAllRanges();
     const newRange = document.createRange();
     newRange.selectNodeContents(span);
     sel.addRange(newRange);
+    editable.dispatchEvent(new Event('input'));
+  }
+
+  // 선택 영역이 이미 해당 색 span에 완전히 감싸여 있는지 찾는다. 같은 색
+  // 버튼을 다시 누르면 색을 빼서 원래 색(검은색)으로 되돌리기 위한 것.
+  function closestColorSpan(node, className, editable) {
+    let el = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+    while (el && el !== editable) {
+      if (el.tagName === 'SPAN' && el.classList.contains(className)) return el;
+      el = el.parentElement;
+    }
+    return null;
+  }
+
+  function unwrapColorSpan(span, editable) {
+    const sel = window.getSelection();
+    const nodes = [...span.childNodes];
+    span.replaceWith(...nodes);
+    sel.removeAllRanges();
+    if (nodes.length) {
+      const newRange = document.createRange();
+      newRange.setStartBefore(nodes[0]);
+      newRange.setEndAfter(nodes[nodes.length - 1]);
+      sel.addRange(newRange);
+    }
+    // replaceWith로 풀려나온 텍스트가 옆 텍스트 노드와 떨어진 별개
+    // 노드로 남는데, Range 경계는 normalize에도 유지되므로 먼저 선택을
+    // 잡은 뒤 합쳐줘야 나중에 같은 지점을 다시 선택했을 때 엇나가지 않는다.
+    editable.normalize();
     editable.dispatchEvent(new Event('input'));
   }
 
@@ -649,6 +683,7 @@
     renderHomeImageList();
     homeEditModal.classList.remove('hidden');
     icons();
+    captureHomeEditModalSnapshot();
   }
 
   function closeHomeEditModal() {
@@ -656,13 +691,27 @@
     workingHomeImages = [];
   }
 
+  // 저장하지 않고 닫으려 할 때(뒤로가기/바깥 클릭/Esc) 확인창을 띄우기 위해,
+  // 모달을 연 시점의 상태를 스냅샷으로 저장해두고 현재 상태와 비교한다.
+  let homeEditModalSnapshot = null;
+  function captureHomeEditModalSnapshot() {
+    homeEditModalSnapshot = JSON.stringify(workingHomeImages);
+  }
+  function isHomeEditModalDirty() {
+    return homeEditModalSnapshot !== JSON.stringify(workingHomeImages);
+  }
+  function requestCloseHomeEditModal() {
+    if (isHomeEditModalDirty() && !window.confirm('저장하지 않은 내용이 있습니다. 닫으시겠습니까?')) return;
+    closeHomeEditModal();
+  }
+
   addHomeImageBtn.addEventListener('click', openHomeEditModal);
-  homeEditCancelBtn.addEventListener('click', closeHomeEditModal);
+  homeEditCancelBtn.addEventListener('click', requestCloseHomeEditModal);
   homeEditModal.querySelectorAll('[data-close-home-edit]').forEach(btn => {
-    btn.addEventListener('click', closeHomeEditModal);
+    btn.addEventListener('click', requestCloseHomeEditModal);
   });
   homeEditModal.addEventListener('click', e => {
-    if (e.target === homeEditModal) closeHomeEditModal();
+    if (e.target === homeEditModal) requestCloseHomeEditModal();
   });
 
   // 드래그로 순서 바꾸기(레퍼런스 토글 항목과 같은 방식)
@@ -995,6 +1044,7 @@
     renderSegmentList();
     editModal.classList.remove('hidden');
     icons();
+    captureEditModalSnapshot();
   }
 
   function closeEditModal() {
@@ -1005,13 +1055,37 @@
     workingThumbnailIds = [];
   }
 
-  $('[data-close-edit]').addEventListener('click', closeEditModal);
-  $('#editCancelBtn').addEventListener('click', closeEditModal);
+  // 저장하지 않고 닫으려 할 때(뒤로가기/바깥 클릭/Esc) 확인창을 띄우기 위해,
+  // 모달을 연 시점의 상태를 스냅샷으로 저장해두고 현재 상태와 비교한다.
+  let editModalSnapshot = null;
+  function captureEditModalSnapshot() {
+    editModalSnapshot = JSON.stringify({
+      title: editTitleInput.value,
+      subcategoryId: editSubcategorySelect.value,
+      thumbnailIds: workingThumbnailIds,
+      segments: workingSegments
+    });
+  }
+  function isEditModalDirty() {
+    return editModalSnapshot !== JSON.stringify({
+      title: editTitleInput.value,
+      subcategoryId: editSubcategorySelect.value,
+      thumbnailIds: workingThumbnailIds,
+      segments: workingSegments
+    });
+  }
+  function requestCloseEditModal() {
+    if (isEditModalDirty() && !window.confirm('저장하지 않은 내용이 있습니다. 닫으시겠습니까?')) return;
+    closeEditModal();
+  }
+
+  $('[data-close-edit]').addEventListener('click', requestCloseEditModal);
+  $('#editCancelBtn').addEventListener('click', requestCloseEditModal);
   editModal.addEventListener('mousedown', e => {
     if (e.target.closest('.toggle-chevron')) e.preventDefault();
   });
   editModal.addEventListener('click', e => {
-    if (e.target === editModal) { closeEditModal(); return; }
+    if (e.target === editModal) { requestCloseEditModal(); return; }
     editModal.querySelectorAll('.rt-icon-menu').forEach(menu => {
       if (!menu.closest('.rt-icon-picker').contains(e.target)) menu.classList.add('hidden');
     });
@@ -1254,7 +1328,16 @@
     toolbar.querySelectorAll('[data-color]').forEach(btn => {
       btn.addEventListener('click', () => {
         editable.focus();
-        wrapSelectionWithClass(editable, btn.dataset.color);
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
+        const range = sel.getRangeAt(0);
+        if (!editable.contains(range.commonAncestorContainer)) return;
+        const existingSpan = closestColorSpan(range.commonAncestorContainer, btn.dataset.color, editable);
+        if (existingSpan) {
+          unwrapColorSpan(existingSpan, editable);
+        } else {
+          wrapSelectionWithClass(editable, btn.dataset.color);
+        }
       });
     });
 
@@ -1497,8 +1580,8 @@
     if (e.key !== 'Escape') return;
     if (!imageLightbox.classList.contains('hidden')) closeImageLightbox();
     else if (!adminPasswordModal.classList.contains('hidden')) closeAdminPasswordModal();
-    else if (!homeEditModal.classList.contains('hidden')) closeHomeEditModal();
-    else if (!editModal.classList.contains('hidden')) closeEditModal();
+    else if (!homeEditModal.classList.contains('hidden')) requestCloseHomeEditModal();
+    else if (!editModal.classList.contains('hidden')) requestCloseEditModal();
     else if (!viewModal.classList.contains('hidden')) closeViewModal();
   });
 
