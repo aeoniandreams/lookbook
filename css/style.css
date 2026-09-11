@@ -206,8 +206,8 @@ input, textarea, select {
 
 .header-actions { display: flex; align-items: center; gap: 10px; }
 
-.sort-dropdown { position: relative; }
-.sort-dropdown-btn {
+.dropdown { position: relative; }
+.dropdown-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -219,14 +219,15 @@ input, textarea, select {
   font-size: 13px;
   font-weight: 600;
 }
-.sort-dropdown-btn:hover { border-color: var(--accent); }
-.sort-dropdown.open .sort-dropdown-btn { border-color: var(--accent); }
-.sort-dropdown-chevron { width: 15px; height: 15px; color: var(--text-muted); transition: transform 0.15s ease; }
-.sort-dropdown.open .sort-dropdown-chevron { transform: rotate(180deg); }
+.dropdown-btn:hover { border-color: var(--accent); }
+.dropdown.open .dropdown-btn { border-color: var(--accent); }
+.dropdown-chevron { width: 15px; height: 15px; color: var(--text-muted); transition: transform 0.15s ease; }
+.dropdown.open .dropdown-chevron { transform: rotate(180deg); }
 
-.sort-dropdown-menu {
+.dropdown-menu {
   position: absolute;
   top: calc(100% + 6px);
+  left: 0;
   right: 0;
   min-width: 130px;
   margin: 0;
@@ -238,8 +239,8 @@ input, textarea, select {
   box-shadow: var(--shadow);
   z-index: 20;
 }
-.sort-dropdown-menu.hidden { display: none; }
-.sort-dropdown-option {
+.dropdown-menu.hidden { display: none; }
+.dropdown-option {
   padding: 8px 10px;
   border-radius: 7px;
   font-size: 13px;
@@ -247,8 +248,12 @@ input, textarea, select {
   color: var(--text);
   cursor: pointer;
 }
-.sort-dropdown-option:hover { background: var(--surface-alt); }
-.sort-dropdown-option.active { background: var(--accent); color: #fff; font-weight: 600; }
+.dropdown-option:hover { background: var(--surface-alt); }
+.dropdown-option.active { background: var(--accent); color: #fff; font-weight: 600; }
+
+/* 카드 수정란의 카테고리/2차 카테고리 선택: 정렬 드롭다운과 같은
+   커스텀 레이아웃을 쓰되, 필드 하나만큼 폭 전체를 차지한다. */
+.field .dropdown-btn { width: 100%; justify-content: space-between; font-weight: 400; }
 
 /* ---------- 버튼 ---------- */
 .primary-btn, .secondary-btn, .danger-btn {
@@ -277,7 +282,7 @@ input, textarea, select {
   flex-shrink: 0;
 }
 
-.secondary-btn { background: var(--surface-alt); color: var(--text); }
+.secondary-btn { color: var(--text); }
 .secondary-btn:hover { background: var(--border); }
 .secondary-btn svg { width: 16px; height: 16px; }
 
@@ -292,7 +297,7 @@ input, textarea, select {
   width: 36px; height: 36px;
   border-radius: 999px;
 }
-.icon-btn:hover { background: var(--surface-alt); }
+.icon-btn:hover { background: #ece8f9; }
 
 /* ---------- 카드 그리드 ---------- */
 .grid {
@@ -721,7 +726,7 @@ input, textarea, select {
   padding: 7px 10px;
   border: 1px solid var(--border);
   border-radius: 7px;
-  background: var(--bg);
+  background: var(--surface-alt);
   font-size: 13px;
 }
 .reference-manage-fields input:focus { outline: none; border-color: var(--accent); }
@@ -733,7 +738,7 @@ input, textarea, select {
   padding: 7px 10px;
   border: 1px solid var(--border);
   border-radius: 7px;
-  background: var(--bg);
+  background: var(--surface-alt);
   font-size: 13px;
   line-height: 1.4;
 }
@@ -809,7 +814,7 @@ input, textarea, select {
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--bg);
+  background: var(--surface-alt);
 }
 .field textarea { resize: vertical; }
 .field input:focus, .field textarea:focus, .field select:focus {
@@ -826,7 +831,7 @@ input, textarea, select {
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--bg);
+  background: var(--surface-alt);
 }
 .image-url-row input:focus { outline: none; border-color: var(--accent); }
 .image-url-row .secondary-btn { flex-shrink: 0; }
@@ -895,7 +900,7 @@ input, textarea, select {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 12px;
-  background: var(--bg);
+  background: var(--surface-alt);
 }
 .segment-box-header {
   display: flex;
@@ -924,7 +929,7 @@ input, textarea, select {
   border-radius: var(--radius-sm);
   color: var(--text-muted);
 }
-.seg-btn:hover { background: var(--surface-alt); color: var(--text); }
+.seg-btn:hover { background: #ece8f9; color: var(--text); }
 .seg-btn svg { width: 14px; height: 14px; }
 
 .segment-drag-handle {

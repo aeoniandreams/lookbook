@@ -42,8 +42,10 @@
 
   const editModal = $('#editModal');
   const editModalTitle = $('#editModalTitle');
-  const editCategorySelect = $('#editCategorySelect');
-  const editSubcategorySelect = $('#editSubcategorySelect');
+  const editCategorySelect = createDropdown($('#editCategoryDropdown'), {
+    onSelect: (catId) => populateSubSelect(catId, null)
+  });
+  const editSubcategorySelect = createDropdown($('#editSubcategoryDropdown'));
   const editTitleInput = $('#editTitleInput');
   const editSegmentList = $('#editSegmentList');
   const addTextSegmentBtn = $('#addTextSegmentBtn');
@@ -860,11 +862,11 @@
     sortDropdownBtn.setAttribute('aria-expanded', 'false');
   }
 
-  sortDropdownMenu.querySelectorAll('.sort-dropdown-option').forEach(opt => {
+  sortDropdownMenu.querySelectorAll('.dropdown-option').forEach(opt => {
     opt.addEventListener('click', () => {
       sortOrder = opt.dataset.value;
       sortDropdownLabel.textContent = opt.textContent;
-      sortDropdownMenu.querySelectorAll('.sort-dropdown-option').forEach(o => {
+      sortDropdownMenu.querySelectorAll('.dropdown-option').forEach(o => {
         o.classList.toggle('active', o === opt);
         o.setAttribute('aria-selected', String(o === opt));
       });
@@ -993,26 +995,81 @@
     }
   });
 
+  // 정렬 드롭다운과 같은 커스텀 레이아웃의 선택 목록. 클릭으로 열고 닫고,
+  // 옵션을 고르면 강조 표시와 라벨을 갱신한다. setOptions로 프로그램적으로
+  // 선택값을 지정하는 것과 사용자가 실제로 클릭해서 고르는 것을 구분해서,
+  // 전자는 onSelect 콜백을 부르지 않는다(초기값 채울 때 불필요한 재실행 방지).
+  function createDropdown(root, { onSelect } = {}) {
+    const btn = root.querySelector('.dropdown-btn');
+    const label = root.querySelector('.dropdown-label');
+    const menu = root.querySelector('.dropdown-menu');
+    let currentValue = null;
+
+    function close() {
+      menu.classList.add('hidden');
+      root.classList.remove('open');
+      btn.setAttribute('aria-expanded', 'false');
+    }
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const willOpen = menu.classList.contains('hidden');
+      menu.classList.toggle('hidden', !willOpen);
+      root.classList.toggle('open', willOpen);
+      btn.setAttribute('aria-expanded', String(willOpen));
+    });
+    document.addEventListener('click', (e) => {
+      if (!root.contains(e.target)) close();
+    });
+
+    function applySelection(value) {
+      currentValue = value;
+      let matched = null;
+      menu.querySelectorAll('.dropdown-option').forEach(li => {
+        const isMatch = li.dataset.value === value;
+        li.classList.toggle('active', isMatch);
+        li.setAttribute('aria-selected', String(isMatch));
+        if (isMatch) matched = li;
+      });
+      label.textContent = matched ? matched.textContent : '';
+    }
+
+    return {
+      setOptions(options, selectedValue) {
+        menu.innerHTML = options.map(o =>
+          `<li class="dropdown-option" data-value="${escapeAttr(o.value)}" role="option" aria-selected="false">${escapeHTML(o.label)}</li>`
+        ).join('');
+        menu.querySelectorAll('.dropdown-option').forEach(li => {
+          li.addEventListener('click', () => {
+            applySelection(li.dataset.value);
+            close();
+            if (onSelect) onSelect(li.dataset.value);
+          });
+        });
+        applySelection(selectedValue);
+      },
+      get value() { return currentValue; }
+    };
+  }
+
   // ---------- 추가/수정 모달 ----------
   function populateCategorySelects(selectedCatId, selectedSubId) {
-    editCategorySelect.innerHTML = CATEGORIES.map(c =>
-      `<option value="${c.id}">${c.name}</option>`).join('');
-    editCategorySelect.value = selectedCatId;
+    editCategorySelect.setOptions(
+      CATEGORIES.map(c => ({ value: c.id, label: c.name })),
+      selectedCatId
+    );
     populateSubSelect(selectedCatId, selectedSubId);
   }
 
   function populateSubSelect(catId, selectedSubId) {
     const cat = CATEGORIES.find(c => c.id === catId);
-    editSubcategorySelect.innerHTML = cat.subs.map(s =>
-      `<option value="${s.id}">${s.name}</option>`).join('');
-    if (selectedSubId && cat.subs.some(s => s.id === selectedSubId)) {
-      editSubcategorySelect.value = selectedSubId;
-    }
+    const validSubId = selectedSubId && cat.subs.some(s => s.id === selectedSubId)
+      ? selectedSubId
+      : cat.subs[0].id;
+    editSubcategorySelect.setOptions(
+      cat.subs.map(s => ({ value: s.id, label: s.name })),
+      validSubId
+    );
   }
-
-  editCategorySelect.addEventListener('change', () => {
-    populateSubSelect(editCategorySelect.value, null);
-  });
 
   function openEditModal(blockId) {
     const block = blockId ? allBlocks.find(b => b.id === blockId) : null;
