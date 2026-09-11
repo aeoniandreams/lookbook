@@ -520,7 +520,7 @@
       const sub = cat.subs.find(s => s.id === selection.subcategoryId);
       breadcrumb.innerHTML = `<span class="crumb-muted">${cat.name}</span> <i data-lucide="chevron-right"></i> ${sub ? sub.name : ''}`;
     } else {
-      breadcrumb.innerHTML = `${cat.name} <span class="crumb-muted">전체</span>`;
+      breadcrumb.innerHTML = `${cat.name} <i data-lucide="chevron-right"></i> <span class="crumb-muted">전체</span>`;
     }
     icons();
   }
@@ -584,10 +584,11 @@
 
   // ---------- 홈 화면 ----------
   function homeItemViewHTML(item) {
-    const titleHTML = item.title ? escapeHTML(item.title) : '';
+    const titleHTML = richTextSourceToHTML(item.title || '');
+    const hasTitle = !richTextIsEmpty(titleHTML);
     return `<div class="reference-item home-image-item" data-link="${escapeAttr(item.link || '')}">
       <img src="${escapeAttr(item.url)}" alt="" loading="lazy">
-      ${titleHTML ? `<div class="reference-comment">${titleHTML}</div>` : ''}
+      ${hasTitle ? `<div class="reference-comment">${titleHTML}</div>` : ''}
     </div>`;
   }
 
@@ -655,7 +656,10 @@
       <img class="reference-manage-thumb" src="${escapeAttr(item.url)}" alt="" onerror="this.classList.add('broken')">
       <div class="reference-manage-fields">
         <input type="url" class="home-url-input" placeholder="이미지 주소(URL)" value="${escapeAttr(item.url || '')}">
-        <input type="text" class="home-title-input" placeholder="제목 (호버/탭 시 표시)" value="${escapeAttr(item.title || '')}">
+        <div class="home-title-row">
+          <button type="button" class="home-title-bold-btn" title="굵게"><b>B</b></button>
+          <div class="home-title-editable" contenteditable="true" data-placeholder="제목 (호버/탭 시 표시, 엔터로 줄바꿈 가능)"></div>
+        </div>
         <input type="url" class="home-link-input" placeholder="이동할 링크 (선택)" value="${escapeAttr(item.link || '')}">
       </div>
       <button type="button" class="reference-remove-btn" title="삭제"><i data-lucide="x"></i></button>
@@ -666,7 +670,24 @@
       thumb.classList.remove('broken');
       thumb.src = item.url;
     });
-    row.querySelector('.home-title-input').addEventListener('input', (e) => { item.title = e.target.value; });
+
+    const titleEditable = row.querySelector('.home-title-editable');
+    titleEditable.innerHTML = richTextEditHTML(item.title || '');
+    item.title = titleEditable.innerHTML; // 옛 일반 텍스트 제목도 곧바로 새 형식으로 맞춘다
+    titleEditable.addEventListener('input', () => { item.title = titleEditable.innerHTML; });
+    titleEditable.addEventListener('paste', e => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+      document.execCommand('insertText', false, text);
+    });
+    const boldBtn = row.querySelector('.home-title-bold-btn');
+    boldBtn.addEventListener('mousedown', e => e.preventDefault());
+    boldBtn.addEventListener('click', () => {
+      titleEditable.focus();
+      document.execCommand('bold', false, null);
+      titleEditable.dispatchEvent(new Event('input'));
+    });
+
     row.querySelector('.home-link-input').addEventListener('input', (e) => { item.link = e.target.value; });
     row.querySelector('.reference-remove-btn').addEventListener('click', () => {
       workingHomeImages = workingHomeImages.filter(i => i.id !== item.id);
@@ -732,7 +753,7 @@
         .map(({ id, url, title, link }) => ({
           id,
           url: url.trim(),
-          title: (title || '').trim(),
+          title: sanitizeRichHTML(title || ''),
           link: (link || '').trim()
         }));
       await LookbookFirebase.saveHomeImages(items);
