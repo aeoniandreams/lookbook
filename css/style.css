@@ -678,6 +678,18 @@ input, textarea, select {
 }
 .reference-remove-btn:hover { background: var(--surface-alt); color: var(--danger); }
 .reference-remove-btn svg { width: 14px; height: 14px; }
+.reference-drag-handle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  cursor: grab;
+  color: var(--text-muted);
+}
+.reference-drag-handle:active { cursor: grabbing; }
+.reference-drag-handle svg { width: 14px; height: 14px; }
+.reference-manage-row.dragging { opacity: 0.4; }
+.reference-manage-row.drag-over-top { box-shadow: inset 0 3px 0 0 var(--accent); }
+.reference-manage-row.drag-over-bottom { box-shadow: inset 0 -3px 0 0 var(--accent); }
 
 .gallery-row { display: flex; gap: 8px; }
 .gallery-row img {

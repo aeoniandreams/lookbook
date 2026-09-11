@@ -843,10 +843,27 @@
     return cell;
   }
 
+  // 레퍼런스 토글 안의 이미지 항목도 세그먼트 박스와 같은 방식(드래그 핸들 +
+  // 위/아래 절반 판정)으로 순서를 바꿀 수 있게 한다. 여러 레퍼런스 토글이
+  // 동시에 있을 수 있어서, 드래그 중인 항목이 "어느 seg"에서 왔는지도 같이
+  // 기억해두고 다른 토글로는 넘어가지 않게 막는다.
+  let dragReferenceState = null;
+
+  function reorderReferenceItem(seg, fromId, toId, after) {
+    const fromIndex = seg.items.findIndex(i => i.id === fromId);
+    if (fromIndex === -1) return;
+    const [moved] = seg.items.splice(fromIndex, 1);
+    let toIndex = seg.items.findIndex(i => i.id === toId);
+    if (toIndex === -1) { seg.items.push(moved); return; }
+    if (after) toIndex += 1;
+    seg.items.splice(toIndex, 0, moved);
+  }
+
   function buildReferenceItemRow(item, seg) {
     const row = document.createElement('div');
     row.className = 'reference-manage-row';
     row.innerHTML = `
+      <span class="reference-drag-handle" draggable="true" title="드래그해서 순서 바꾸기"><i data-lucide="grip-vertical"></i></span>
       <img class="reference-manage-thumb" src="${escapeAttr(item.url)}" alt="" onerror="this.classList.add('broken')">
       <div class="reference-manage-fields">
         <input type="url" class="reference-url-input" placeholder="이미지 주소(URL)" value="${escapeAttr(item.url || '')}">
@@ -867,6 +884,47 @@
       seg.items = seg.items.filter(i => i.id !== item.id);
       renderSegmentList();
     });
+
+    const handle = row.querySelector('.reference-drag-handle');
+    handle.addEventListener('dragstart', (e) => {
+      e.stopPropagation(); // 바깥 세그먼트 박스의 드래그 로직과 섞이지 않게 막는다
+      dragReferenceState = { seg, itemId: item.id };
+      row.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', item.id);
+    });
+    handle.addEventListener('dragend', (e) => {
+      e.stopPropagation();
+      dragReferenceState = null;
+      editSegmentList.querySelectorAll('.reference-manage-row').forEach(r => {
+        r.classList.remove('dragging', 'drag-over-top', 'drag-over-bottom');
+      });
+    });
+    row.addEventListener('dragover', (e) => {
+      if (!dragReferenceState || dragReferenceState.seg !== seg) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const isAfter = (e.clientY - row.getBoundingClientRect().top) > row.offsetHeight / 2;
+      row.classList.toggle('drag-over-top', !isAfter);
+      row.classList.toggle('drag-over-bottom', isAfter);
+    });
+    row.addEventListener('dragleave', (e) => {
+      e.stopPropagation();
+      row.classList.remove('drag-over-top', 'drag-over-bottom');
+    });
+    row.addEventListener('drop', (e) => {
+      if (!dragReferenceState || dragReferenceState.seg !== seg) return;
+      e.preventDefault();
+      e.stopPropagation();
+      row.classList.remove('drag-over-top', 'drag-over-bottom');
+      if (dragReferenceState.itemId !== item.id) {
+        const isAfter = (e.clientY - row.getBoundingClientRect().top) > row.offsetHeight / 2;
+        reorderReferenceItem(seg, dragReferenceState.itemId, item.id, isAfter);
+        renderSegmentList();
+      }
+      dragReferenceState = null;
+    });
+
     return row;
   }
 
