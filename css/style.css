@@ -793,6 +793,12 @@ input, textarea, select {
   height: 280px;
   object-fit: cover;
 }
+.gallery-comment {
+  margin: 6px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-muted);
+}
 
 /* ---------- 추가/수정 모달 ---------- */
 .edit-modal h2 { margin: 0 0 18px; font-size: 19px; }
@@ -846,6 +852,15 @@ input, textarea, select {
   gap: 10px;
   margin-top: 10px;
 }
+
+.image-comment-input {
+  width: 100%;
+  margin-top: 10px;
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.image-comment-input:focus { outline: none; border-color: var(--accent); }
 
 .image-manage-cell {
   position: relative;

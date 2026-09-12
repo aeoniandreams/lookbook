@@ -906,7 +906,10 @@
       return referenceToggleViewHTML(seg);
     }
     const cls = seg.images.length > 1 ? 'gallery-row multi' : 'gallery-row single';
-    return `<div class="${cls}">${seg.images.map(img => `<img src="${img.url}" alt="" loading="lazy">`).join('')}</div>`;
+    const galleryHTML = `<div class="${cls}">${seg.images.map(img => `<img src="${img.url}" alt="" loading="lazy">`).join('')}</div>`;
+    const comment = (seg.comment || '').trim();
+    if (!comment) return galleryHTML;
+    return `<div class="gallery-block">${galleryHTML}<p class="gallery-comment">${escapeHTML(comment)}</p></div>`;
   }
 
   function openViewModal(blockId) {
@@ -931,19 +934,23 @@
     viewModal.dataset.blockId = '';
   }
 
-  function openImageLightbox(url) {
+  let lightboxSourceItem = null;
+  function openImageLightbox(url, sourceItem) {
     imageLightboxImg.src = url;
     imageLightbox.classList.remove('hidden');
+    lightboxSourceItem = sourceItem || null;
   }
 
   function closeImageLightbox() {
     imageLightbox.classList.add('hidden');
     imageLightboxImg.src = '';
     // 모바일에서 두 번째 탭으로 원본을 열었던 항목은, 닫으면 코멘트가 가려진
-    // 처음 모습으로 되돌려놓는다.
-    viewSegments.querySelectorAll('.reference-item.revealed').forEach(el => {
-      el.classList.remove('revealed');
-    });
+    // 처음 모습으로 되돌려놓는다. 그 항목만 되돌리고, 다른 항목의 펼침
+    // 상태는 그대로 둔다.
+    if (lightboxSourceItem) {
+      lightboxSourceItem.classList.remove('revealed');
+      lightboxSourceItem = null;
+    }
   }
 
   // 배경이든 이미지든 닫기 버튼이든, 라이트박스 안 어디를 눌러도 닫힌다.
@@ -965,7 +972,7 @@
         return;
       }
       const img = refItem.querySelector('img');
-      if (img) openImageLightbox(img.src);
+      if (img) openImageLightbox(img.src, refItem);
       return;
     }
     const header = e.target.closest('.text-toggle-header, .reference-toggle-header');
@@ -1089,7 +1096,12 @@
             items: (seg.items || []).map(it => ({ id: it.id, url: it.url, comment: it.comment || '' }))
           };
         }
-        return { type: 'image', id: seg.id, images: seg.images.map(img => ({ id: img.id, url: img.url })) };
+        return {
+          type: 'image',
+          id: seg.id,
+          images: seg.images.map(img => ({ id: img.id, url: img.url })),
+          comment: seg.comment || ''
+        };
       })
       : [];
     workingThumbnailIds = block ? [...(block.thumbnailIds || [])] : [];
@@ -1162,7 +1174,7 @@
   }
 
   function addImageSegment() {
-    workingSegments.push({ type: 'image', id: uid(), images: [] });
+    workingSegments.push({ type: 'image', id: uid(), images: [], comment: '' });
     renderSegmentList();
   }
 
@@ -1535,6 +1547,14 @@
         seg.images.forEach(img => grid.appendChild(buildImageCell(img, seg)));
       }
       box.appendChild(grid);
+
+      const commentInput = document.createElement('input');
+      commentInput.type = 'text';
+      commentInput.className = 'image-comment-input';
+      commentInput.placeholder = '이미지 아래에 표시할 코멘트 (선택, 박스 전체에 하나)';
+      commentInput.value = seg.comment || '';
+      commentInput.addEventListener('input', () => { seg.comment = commentInput.value; });
+      box.appendChild(commentInput);
     }
 
     return box;
@@ -1586,7 +1606,12 @@
                 .map(({ id, url, comment }) => ({ id, url: url.trim(), comment: (comment || '').trim() }))
             };
           }
-          return { type: 'image', id: seg.id, images: seg.images.map(({ id, url }) => ({ id, url })) };
+          return {
+            type: 'image',
+            id: seg.id,
+            images: seg.images.map(({ id, url }) => ({ id, url })),
+            comment: (seg.comment || '').trim()
+          };
         });
 
       const savedImageIds = segments.filter(s => s.type === 'image').flatMap(s => s.images.map(img => img.id));
