@@ -1090,6 +1090,11 @@ input, textarea, select {
   .grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
   .modal { padding: 20px; }
   .gallery-row { gap: 6px; }
-  .gallery-row.multi { flex-direction: column; }
-  .gallery-row.multi img { flex: none; height: auto; object-fit: initial; }
+  .gallery-row.multi { flex-wrap: wrap; align-items: flex-start; }
+  .gallery-row.multi img {
+    flex: 0 0 calc(50% - 3px);
+    width: calc(50% - 3px);
+    height: auto;
+    object-fit: initial;
+  }
 }
