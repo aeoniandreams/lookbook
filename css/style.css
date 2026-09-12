@@ -285,6 +285,8 @@ input, textarea, select {
 .secondary-btn { background: var(--surface-alt); color: var(--text); }
 .secondary-btn:hover { background: var(--border); }
 .secondary-btn svg { width: 16px; height: 16px; }
+#editCancelBtn, .reference-add-item-btn { background: none; }
+#editCancelBtn:hover, .reference-add-item-btn:hover { background: var(--border); }
 
 .danger-btn { background: var(--danger-soft); color: var(--danger); }
 .danger-btn:hover { background: #f6ccd3; }
@@ -828,6 +830,7 @@ input, textarea, select {
 }
 .image-url-row input {
   flex: 1;
+  min-width: 0;
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);

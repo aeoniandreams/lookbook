@@ -1499,7 +1499,7 @@
 
       const addItemBtn = document.createElement('button');
       addItemBtn.type = 'button';
-      addItemBtn.className = 'secondary-btn';
+      addItemBtn.className = 'secondary-btn reference-add-item-btn';
       addItemBtn.innerHTML = `<i data-lucide="plus"></i> 이미지 추가`;
       addItemBtn.addEventListener('click', () => {
         seg.items.push({ id: uid(), url: '', comment: '' });
