@@ -584,7 +584,7 @@ input, textarea, select {
 .view-text-block .rt-gray { color: var(--text-muted); }
 .view-text-block .rt-accent { color: var(--accent); }
 .view-text-block .rt-red { color: var(--danger); }
-.view-text-block img { max-width: 100%; border-radius: var(--radius-sm); display: block; margin: 8px 0; }
+.view-text-block img { max-width: 100%; border-radius: var(--radius-sm); display: block; margin: 8px 0; cursor: zoom-in; }
 .rt-icon {
   display: inline-flex;
   vertical-align: -0.2em;
@@ -784,6 +784,7 @@ input, textarea, select {
 .gallery-row img {
   border-radius: var(--radius-sm);
   display: block;
+  cursor: zoom-in;
 }
 .gallery-row.single img { width: 100%; height: auto; }
 .gallery-row.multi img {

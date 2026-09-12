@@ -975,6 +975,11 @@
       if (img) openImageLightbox(img.src, refItem);
       return;
     }
+    const plainImg = e.target.closest('.gallery-row img, .view-text-block img');
+    if (plainImg) {
+      openImageLightbox(plainImg.src);
+      return;
+    }
     const header = e.target.closest('.text-toggle-header, .reference-toggle-header');
     if (header) {
       header.closest('.text-toggle, .reference-toggle').classList.toggle('open');
