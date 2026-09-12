@@ -113,7 +113,7 @@ input, textarea, select {
 }
 .sidebar-logout-btn svg { width: 16px; height: 16px; }
 .sidebar-logout-btn:hover { color: var(--danger); }
-.sidebar-admin-badge { color: var(--text-muted); font-weight: 600; }
+.sidebar-admin-badge { color: var(--text-muted); }
 
 .nav-category-head {
   width: 100%;
@@ -253,7 +253,7 @@ input, textarea, select {
 
 /* 카드 수정란의 카테고리/2차 카테고리 선택: 정렬 드롭다운과 같은
    커스텀 레이아웃을 쓰되, 필드 하나만큼 폭 전체를 차지한다. */
-.field .dropdown-btn { width: 100%; justify-content: space-between; font-weight: 400; }
+.field .dropdown-btn { width: 100%; justify-content: space-between; font-weight: 400; background: var(--bg); }
 
 /* ---------- 버튼 ---------- */
 .primary-btn, .secondary-btn, .danger-btn {
@@ -688,7 +688,6 @@ input, textarea, select {
   padding: 9px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--surface);
   margin-bottom: 10px;
 }
 .reference-title-input:focus { outline: none; border-color: var(--accent); }
@@ -728,7 +727,6 @@ input, textarea, select {
   padding: 7px 10px;
   border: 1px solid var(--border);
   border-radius: 7px;
-  background: var(--bg);
   font-size: 13px;
 }
 .reference-manage-fields input:focus { outline: none; border-color: var(--accent); }
@@ -816,7 +814,6 @@ input, textarea, select {
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--bg);
 }
 .field textarea { resize: vertical; }
 .field input:focus, .field textarea:focus, .field select:focus {
@@ -837,7 +834,8 @@ input, textarea, select {
   background: var(--bg);
 }
 .image-url-row input:focus { outline: none; border-color: var(--accent); }
-.image-url-row .secondary-btn { flex-shrink: 0; }
+.image-url-row .secondary-btn { flex-shrink: 0; background: none; }
+.image-url-row .secondary-btn:hover { background: var(--border); }
 
 .hint { font-size: 12px; color: var(--text-muted); margin: 8px 0 0; }
 
@@ -1091,4 +1089,7 @@ input, textarea, select {
   #main { padding: 70px 16px 50px; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
   .modal { padding: 20px; }
+  .gallery-row { gap: 6px; }
+  .gallery-row.multi { flex-direction: column; }
+  .gallery-row.multi img { flex: none; height: auto; object-fit: initial; }
 }
