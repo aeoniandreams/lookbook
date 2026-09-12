@@ -78,6 +78,11 @@
   function layoutMasonryContainer(container) {
     const items = [...container.querySelectorAll('.reference-item')];
     if (!items.length) { container.innerHTML = ''; return; }
+    // 한 번 컬럼으로 나누고 나면 DOM 순서는 "1번 컬럼 전부, 2번 컬럼 전부"가
+    // 되어 원래 순서가 아니게 된다. 이 함수가 다시 호출될 때(창 크기 변경
+    // 등) 그 DOM 순서를 그대로 다시 나누면 매번 순서가 달라져 버리므로,
+    // 각 항목에 심어둔 원래 순번(data-order)으로 항상 다시 정렬한 뒤 나눈다.
+    items.sort((a, b) => Number(a.dataset.order) - Number(b.dataset.order));
     const columnCount = masonryColumnCount();
     const cols = Array.from({ length: columnCount }, () => {
       const col = document.createElement('div');
@@ -649,10 +654,10 @@
   }
 
   // ---------- 홈 화면 ----------
-  function homeItemViewHTML(item) {
+  function homeItemViewHTML(item, index) {
     const titleHTML = richTextSourceToHTML(item.title || '');
     const hasTitle = !richTextIsEmpty(titleHTML);
-    return `<div class="reference-item home-image-item" data-link="${escapeAttr(item.link || '')}">
+    return `<div class="reference-item home-image-item" data-order="${index}" data-link="${escapeAttr(item.link || '')}">
       <img src="${escapeAttr(item.url)}" alt="" loading="lazy">
       ${hasTitle ? `<div class="reference-comment"><div class="reference-comment-text">${titleHTML}</div></div>` : ''}
     </div>`;
@@ -882,8 +887,8 @@
   // ---------- 상세 보기 모달 ----------
   function referenceToggleViewHTML(seg) {
     const titleHTML = escapeHTML((seg.title || '').trim() || '레퍼런스');
-    const itemsHTML = (seg.items || []).map(item => `
-      <div class="reference-item">
+    const itemsHTML = (seg.items || []).map((item, index) => `
+      <div class="reference-item" data-order="${index}">
         <img src="${escapeAttr(item.url)}" alt="" loading="lazy">
         ${item.comment ? `<div class="reference-comment"><div class="reference-comment-text">${escapeHTML(item.comment)}</div></div>` : ''}
       </div>
