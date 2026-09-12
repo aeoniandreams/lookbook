@@ -68,7 +68,66 @@
   function icons() {
     if (window.lucide) lucide.createIcons();
     refreshMasonryLayouts();
+    updateStickyToolbars();
   }
+
+  // ---------- 텍스트 박스 툴바 고정 ----------
+  // CSS position:sticky만 쓰면, 박스 안 본문을 충분히 스크롤했을 때 본문이
+  // 툴바보다 먼저 "원래 자리"로 흘러들어와 툴바 위로 삐져나온다(sticky는
+  // 자신의 형제 요소 레이아웃에 영향을 주지 않기 때문). 그래서 스크롤/크기
+  // 변경마다 각 박스의 위치를 직접 계산해서, 박스가 화면 위쪽을 지나가는
+  // 동안에만 툴바를 position:fixed로 바꿔 고정하고, 박스가 끝나가면 다시
+  // 원래 자리로 되돌린다.
+  function updateStickyToolbars() {
+    if (editModal.classList.contains('hidden')) return;
+    const modalEl = editModal.querySelector('.modal');
+    if (!modalEl) return;
+    const stickY = modalEl.getBoundingClientRect().top + 16;
+    editModal.querySelectorAll('.segment-box').forEach(box => {
+      const toolbar = box.querySelector('.rt-toolbar');
+      if (!toolbar) return;
+      let placeholder = toolbar.nextElementSibling;
+      if (!placeholder || !placeholder.classList.contains('rt-toolbar-placeholder')) {
+        placeholder = document.createElement('div');
+        placeholder.className = 'rt-toolbar-placeholder';
+        toolbar.after(placeholder);
+      }
+      const boxRect = box.getBoundingClientRect();
+      const toolbarHeight = toolbar.offsetHeight;
+      // 박스가 위로 충분히 스크롤됐고, 박스 안에 툴바 하나 들어갈 자리가
+      // 아직 남아있을 때만 고정한다 — 박스가 거의 끝났으면 그냥 흘러가게
+      // 둬서 다음 박스 헤더와 겹치지 않게 한다.
+      const shouldFix = boxRect.top < stickY && boxRect.bottom > stickY + toolbarHeight + 12;
+      if (shouldFix) {
+        if (!toolbar.classList.contains('rt-toolbar-fixed')) {
+          placeholder.style.height = toolbarHeight + 'px';
+          placeholder.style.display = 'block';
+          toolbar.classList.add('rt-toolbar-fixed');
+        }
+        const boxStyle = getComputedStyle(box);
+        const padLeft = parseFloat(boxStyle.paddingLeft) || 0;
+        const padRight = parseFloat(boxStyle.paddingRight) || 0;
+        toolbar.style.top = stickY + 'px';
+        toolbar.style.left = (boxRect.left + padLeft) + 'px';
+        toolbar.style.width = (boxRect.width - padLeft - padRight) + 'px';
+      } else if (toolbar.classList.contains('rt-toolbar-fixed')) {
+        toolbar.classList.remove('rt-toolbar-fixed');
+        toolbar.style.top = '';
+        toolbar.style.left = '';
+        toolbar.style.width = '';
+        placeholder.style.display = 'none';
+      }
+    });
+  }
+
+  let toolbarUpdateScheduled = false;
+  function scheduleStickyToolbarUpdate() {
+    if (toolbarUpdateScheduled) return;
+    toolbarUpdateScheduled = true;
+    requestAnimationFrame(() => { toolbarUpdateScheduled = false; updateStickyToolbars(); });
+  }
+  window.addEventListener('resize', scheduleStickyToolbarUpdate);
+  editModal.querySelector('.modal').addEventListener('scroll', scheduleStickyToolbarUpdate);
 
   // ---------- 레퍼런스 매소너리 컬럼 배치 ----------
   function masonryColumnCount() {
