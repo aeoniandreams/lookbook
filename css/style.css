@@ -798,6 +798,7 @@ input, textarea, select {
   font-size: 13px;
   line-height: 1.5;
   color: var(--text-muted);
+  text-align: center;
 }
 
 /* ---------- 추가/수정 모달 ---------- */
@@ -837,7 +838,6 @@ input, textarea, select {
   padding: 10px 12px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  background: var(--bg);
 }
 .image-url-row input:focus { outline: none; border-color: var(--accent); }
 .image-url-row .secondary-btn { flex-shrink: 0; background: none; }
@@ -1050,6 +1050,7 @@ input, textarea, select {
 .segment-editable img { max-width: 100%; border-radius: var(--radius-sm); display: block; margin: 8px 0; }
 
 .segment-add-row { display: flex; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
+#editModal .segment-add-row { margin-top: 12px; }
 
 .edit-actions {
   display: flex;
