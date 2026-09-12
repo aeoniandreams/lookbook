@@ -409,6 +409,31 @@
     return !div.textContent.trim();
   }
 
+  // 아이콘(.rt-icon)은 텍스트가 없는 요소라서, 선택 범위가 텍스트 노드
+  // 경계에서 끝나면(전체 선택 등) 브라우저가 바로 옆에 붙어있는 아이콘까지는
+  // 선택에 포함시키지 않는다 — 그 상태로 색을 입히면 아이콘만 빠진다.
+  // 선택의 시작/끝이 텍스트 노드의 맨 앞/뒤이면서 그 형제가 아이콘이면,
+  // 그 아이콘들을 선택 범위 안으로 넣어준다.
+  function extendRangeAcrossAdjacentIcons(range) {
+    const isIcon = node => node && node.nodeType === Node.ELEMENT_NODE && node.classList.contains('rt-icon');
+
+    let endSibling = range.endContainer.nodeType === Node.TEXT_NODE && range.endOffset === range.endContainer.length
+      ? range.endContainer.nextSibling
+      : (range.endContainer.nodeType === Node.ELEMENT_NODE ? range.endContainer.childNodes[range.endOffset] : null);
+    while (isIcon(endSibling)) {
+      range.setEndAfter(endSibling);
+      endSibling = endSibling.nextSibling;
+    }
+
+    let startSibling = range.startContainer.nodeType === Node.TEXT_NODE && range.startOffset === 0
+      ? range.startContainer.previousSibling
+      : (range.startContainer.nodeType === Node.ELEMENT_NODE && range.startOffset > 0 ? range.startContainer.childNodes[range.startOffset - 1] : null);
+    while (isIcon(startSibling)) {
+      range.setStartBefore(startSibling);
+      startSibling = startSibling.previousSibling;
+    }
+  }
+
   // 툴바의 글씨색 버튼: 선택 영역을 <span class="rt-xxx">로 감싼다
   // (execCommand foreColor는 인라인 color 스타일을 남겨 정제하기 까다로움).
   function wrapSelectionWithClass(editable, className) {
@@ -416,6 +441,7 @@
     if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
     const range = sel.getRangeAt(0);
     if (!editable.contains(range.commonAncestorContainer)) return;
+    extendRangeAcrossAdjacentIcons(range);
     const span = document.createElement('span');
     span.className = className;
     try {
