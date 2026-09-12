@@ -82,7 +82,15 @@
     if (editModal.classList.contains('hidden')) return;
     const modalEl = editModal.querySelector('.modal');
     if (!modalEl) return;
-    const stickY = modalEl.getBoundingClientRect().top + 16;
+    // 모달 패딩 때문에 생기는 "여백"만큼은 스크롤 중에도 실제로는 본문이
+    // 차지할 수 있는 공간이라(패딩은 맨 위/맨 아래에서만 보존됨), 툴바를
+    // 패딩 아래에 살짝 띄워 놓으면 그 사이로 스크롤되는 본문 줄이 비쳐
+    // 보인다. 그래서 툴바를 모달의 진짜 위쪽 경계에 딱 붙이고, 원래
+    // 패딩만큼의 여백은 툴바 자신의 padding-top으로 만들어서 그 틈까지
+    // 전부 툴바의 불투명한 배경으로 덮는다.
+    const modalRect = modalEl.getBoundingClientRect();
+    const modalPaddingTop = parseFloat(getComputedStyle(modalEl).paddingTop) || 0;
+    const stickY = modalRect.top;
     editModal.querySelectorAll('.segment-box').forEach(box => {
       const toolbar = box.querySelector('.rt-toolbar');
       if (!toolbar) return;
@@ -92,29 +100,33 @@
         placeholder.className = 'rt-toolbar-placeholder';
         toolbar.after(placeholder);
       }
+      const wasFixed = toolbar.classList.contains('rt-toolbar-fixed');
+      // 고정 상태일 땐 이미 자기 높이에 modalPaddingTop이 더해져 있으니
+      // 빼서, 고정 여부와 무관하게 항상 "패딩 없는 원래 높이"를 구한다
+      // (매 프레임 클래스를 뗐다 붙였다 하며 다시 재는 것보다 훨씬 싸다).
+      const naturalHeight = toolbar.offsetHeight - (wasFixed ? modalPaddingTop : 0);
       const boxRect = box.getBoundingClientRect();
-      const toolbarHeight = toolbar.offsetHeight;
       // 박스가 위로 충분히 스크롤됐고, 박스 안에 툴바 하나 들어갈 자리가
       // 아직 남아있을 때만 고정한다 — 박스가 거의 끝났으면 그냥 흘러가게
       // 둬서 다음 박스 헤더와 겹치지 않게 한다.
-      const shouldFix = boxRect.top < stickY && boxRect.bottom > stickY + toolbarHeight + 12;
+      const shouldFix = boxRect.top < stickY && boxRect.bottom > stickY + modalPaddingTop + naturalHeight + 12;
       if (shouldFix) {
-        if (!toolbar.classList.contains('rt-toolbar-fixed')) {
-          placeholder.style.height = toolbarHeight + 'px';
-          placeholder.style.display = 'block';
-          toolbar.classList.add('rt-toolbar-fixed');
-        }
+        placeholder.style.height = naturalHeight + 'px';
+        placeholder.style.display = 'block';
+        toolbar.classList.add('rt-toolbar-fixed');
+        toolbar.style.paddingTop = modalPaddingTop + 'px';
         const boxStyle = getComputedStyle(box);
         const padLeft = parseFloat(boxStyle.paddingLeft) || 0;
         const padRight = parseFloat(boxStyle.paddingRight) || 0;
         toolbar.style.top = stickY + 'px';
         toolbar.style.left = (boxRect.left + padLeft) + 'px';
         toolbar.style.width = (boxRect.width - padLeft - padRight) + 'px';
-      } else if (toolbar.classList.contains('rt-toolbar-fixed')) {
+      } else if (wasFixed) {
         toolbar.classList.remove('rt-toolbar-fixed');
         toolbar.style.top = '';
         toolbar.style.left = '';
         toolbar.style.width = '';
+        toolbar.style.paddingTop = '';
         placeholder.style.display = 'none';
       }
     });
