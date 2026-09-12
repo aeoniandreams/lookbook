@@ -968,7 +968,11 @@ input, textarea, select {
   flex-wrap: wrap;
   gap: 4px;
   margin-bottom: 6px;
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: var(--bg);
+  padding: 2px 0;
 }
 .rt-btn {
   width: 28px;
