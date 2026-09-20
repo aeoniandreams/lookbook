@@ -33,7 +33,7 @@
   const sortDropdownBtn = $('#sortDropdownBtn');
   const sortDropdownLabel = $('#sortDropdownLabel');
   const sortDropdownMenu = $('#sortDropdownMenu');
-  let sortOrder = 'alpha';
+  let sortOrder = 'oldest';
 
   const viewModal = $('#viewModal');
   const viewSegments = $('#viewSegments');
@@ -747,10 +747,8 @@
     const sorted = blocks.slice();
     if (sortOrder === 'newest') {
       sorted.sort((a, b) => yearMonthValue(b) - yearMonthValue(a));
-    } else if (sortOrder === 'oldest') {
-      sorted.sort((a, b) => yearMonthValue(a) - yearMonthValue(b));
     } else {
-      sorted.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ko'));
+      sorted.sort((a, b) => yearMonthValue(a) - yearMonthValue(b));
     }
     return sorted;
   }
