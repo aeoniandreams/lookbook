@@ -57,6 +57,13 @@
   const emptyAddBtn = $('#emptyAddBtn');
   const viewActions = $('#viewActions');
 
+  const searchInput = $('#searchInput');
+  const searchClearBtn = $('#searchClearBtn');
+  const searchResultsView = $('#searchResultsView');
+  const searchResultsList = $('#searchResultsList');
+  const searchEmptyState = $('#searchEmptyState');
+  let searchQuery = '';
+
   const sidebarUsernameBtn = $('#sidebarUsernameBtn');
   const sidebarAdminBadge = $('#sidebarAdminBadge');
   const sidebarLogoutBtn = $('#sidebarLogoutBtn');
@@ -617,6 +624,7 @@
         <i data-lucide="chevron-down" class="chevron"></i>
       `;
       head.addEventListener('click', () => {
+        clearSearch();
         currentView = 'category';
         selection = { categoryId: cat.id, subcategoryId: null };
         renderSidebar();
@@ -632,6 +640,7 @@
         subBtn.innerHTML = `<span>${sub.name}</span><span class="cat-count">${subCount}</span>`;
         subBtn.addEventListener('click', (e) => {
           e.stopPropagation();
+          clearSearch();
           currentView = 'category';
           selection = { categoryId: cat.id, subcategoryId: sub.id };
           renderSidebar();
@@ -649,6 +658,7 @@
   }
 
   homeNavBtn.addEventListener('click', () => {
+    clearSearch();
     currentView = 'home';
     renderSidebar();
     renderMain();
@@ -706,6 +716,20 @@
     return source.map(img => `<div class="thumb-half"><img src="${img.url}" alt="" loading="lazy"></div>`).join('');
   }
 
+  function buildCardElement(block) {
+    const thumbCount = (block.thumbnailIds && block.thumbnailIds.length) || (allImages(block).length ? 1 : 0);
+    const card = document.createElement('article');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="card-thumb thumb-count-${thumbCount}">
+        ${thumbnailHTML(block)}
+      </div>
+      <div class="card-title">${escapeHTML(block.title || '(제목 없음)')}</div>
+    `;
+    card.addEventListener('click', () => openViewModal(block.id));
+    return card;
+  }
+
   function renderGrid() {
     const blocks = visibleBlocks();
     blockGrid.innerHTML = '';
@@ -719,23 +743,93 @@
     emptyState.classList.add('hidden');
     blockGrid.classList.remove('hidden');
 
-    blocks.forEach(block => {
-      const thumbCount = (block.thumbnailIds && block.thumbnailIds.length) || (allImages(block).length ? 1 : 0);
-      const card = document.createElement('article');
-      card.className = 'card';
-      card.innerHTML = `
-        <div class="card-thumb thumb-count-${thumbCount}">
-          ${thumbnailHTML(block)}
+    blocks.forEach(block => blockGrid.appendChild(buildCardElement(block)));
+    icons();
+  }
+
+  // ---------- 검색 ----------
+  function isSearching() {
+    return searchQuery.trim().length > 0;
+  }
+
+  // 1차 > 2차 카테고리 순서를 그대로 따라가며, 제목에 검색어가 들어간
+  // 카드가 하나라도 있는 2차 카테고리만 그룹으로 묶는다.
+  function searchResultGroups(query) {
+    const q = query.trim().toLowerCase();
+    if (!q) return [];
+    const groups = [];
+    CATEGORIES.forEach(cat => {
+      cat.subs.forEach(sub => {
+        const matches = allBlocks
+          .filter(b => b.subcategoryId === sub.id && (b.title || '').toLowerCase().includes(q))
+          .sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ko'));
+        if (matches.length) groups.push({ cat, sub, blocks: matches });
+      });
+    });
+    return groups;
+  }
+
+  function renderSearchResults() {
+    const groups = searchResultGroups(searchQuery);
+    searchResultsList.innerHTML = '';
+
+    if (!groups.length) {
+      searchEmptyState.classList.remove('hidden');
+      searchResultsList.classList.add('hidden');
+      icons();
+      return;
+    }
+    searchEmptyState.classList.add('hidden');
+    searchResultsList.classList.remove('hidden');
+
+    groups.forEach(({ cat, sub, blocks }) => {
+      const groupEl = document.createElement('div');
+      groupEl.className = 'search-group';
+      groupEl.innerHTML = `
+        <div class="search-group-header">
+          <span class="crumb-muted">${escapeHTML(cat.name)}</span> <i data-lucide="chevron-right"></i> ${escapeHTML(sub.name)}
         </div>
-        <div class="card-title">${escapeHTML(block.title || '(제목 없음)')}</div>
       `;
-      card.addEventListener('click', () => openViewModal(block.id));
-      blockGrid.appendChild(card);
+      const grid = document.createElement('div');
+      grid.className = 'grid';
+      blocks.forEach(block => grid.appendChild(buildCardElement(block)));
+      groupEl.appendChild(grid);
+      searchResultsList.appendChild(groupEl);
     });
     icons();
   }
 
+  function clearSearch() {
+    if (!searchQuery) return;
+    searchQuery = '';
+    searchInput.value = '';
+    searchClearBtn.classList.add('hidden');
+  }
+
+  searchInput.addEventListener('input', () => {
+    searchQuery = searchInput.value;
+    searchClearBtn.classList.toggle('hidden', !searchQuery);
+    renderMain();
+  });
+
+  searchClearBtn.addEventListener('click', () => {
+    clearSearch();
+    renderMain();
+    searchInput.focus();
+  });
+
   function renderMain() {
+    if (isSearching()) {
+      contentHeader.classList.add('hidden');
+      blockGrid.classList.add('hidden');
+      emptyState.classList.add('hidden');
+      homeView.classList.add('hidden');
+      searchResultsView.classList.remove('hidden');
+      renderSearchResults();
+      return;
+    }
+    searchResultsView.classList.add('hidden');
+
     if (currentView === 'home') {
       contentHeader.classList.add('hidden');
       blockGrid.classList.add('hidden');

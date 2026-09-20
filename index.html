@@ -114,6 +114,14 @@
   <div id="sidebarScrim" class="hidden"></div>
 
   <main id="main">
+    <div class="search-bar">
+      <div class="search-input-wrap">
+        <i data-lucide="search"></i>
+        <input type="text" id="searchInput" placeholder="카드 검색" autocomplete="off">
+        <button type="button" id="searchClearBtn" class="search-clear-btn hidden" aria-label="검색어 지우기"><i data-lucide="x"></i></button>
+      </div>
+    </div>
+
     <header id="contentHeader">
       <div class="breadcrumb" id="breadcrumb"></div>
       <div class="header-actions">
@@ -151,6 +159,14 @@
       <button type="button" id="addHomeImageBtn" class="primary-btn icon-only admin-only hidden" aria-label="홈 이미지 추가">
         <i data-lucide="plus"></i>
       </button>
+    </section>
+
+    <section id="searchResultsView" class="search-results-view hidden">
+      <div id="searchResultsList"></div>
+      <div id="searchEmptyState" class="empty-state hidden">
+        <i data-lucide="search-x"></i>
+        <p>검색 결과가 없어요.</p>
+      </div>
     </section>
   </main>
 </div>

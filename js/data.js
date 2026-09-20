@@ -7,7 +7,8 @@ const CATEGORIES = [
     icon: 'ferris-wheel',
     subs: [
       { id: 'jung-yun-jakjung', name: '작중' },
-      { id: 'jung-yun-planning', name: '기획 일러스트' },
+      { id: 'jung-yun-planning', name: '기획 일러스트 : 애니' },
+      { id: 'jung-yun-planning-original', name: '기획 일러스트 : 원작' },
       { id: 'jung-yun-bunmayo', name: '분마요' }
     ]
   },
