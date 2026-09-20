@@ -84,7 +84,7 @@ input, textarea, select {
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 10px 6px;
+  padding: 2px 6px;
   border-radius: var(--radius-sm);
   text-align: left;
 }
