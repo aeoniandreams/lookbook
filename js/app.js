@@ -29,11 +29,13 @@
   const addHomeImageRowBtn = $('#addHomeImageRowBtn');
   const homeEditCancelBtn = $('#homeEditCancelBtn');
   const homeEditSaveBtn = $('#homeEditSaveBtn');
-  const sortDropdown = $('#sortDropdown');
-  const sortDropdownBtn = $('#sortDropdownBtn');
-  const sortDropdownLabel = $('#sortDropdownLabel');
-  const sortDropdownMenu = $('#sortDropdownMenu');
-  let sortOrder = 'alpha';
+  const orderAdjustBtn = $('#orderAdjustBtn');
+  const orderAdjustActions = $('#orderAdjustActions');
+  const orderAdjustCancelBtn = $('#orderAdjustCancelBtn');
+  const orderAdjustSaveBtn = $('#orderAdjustSaveBtn');
+  let subOrders = {}; // { [subcategoryId]: [blockId, ...] } — 저장된 수동 정렬만 들어있음
+  let orderAdjustMode = false;
+  let workingOrder = []; // 정렬 조정 중인 블록 id 순서
 
   const viewModal = $('#viewModal');
   const viewSegments = $('#viewSegments');
@@ -247,10 +249,11 @@
 
   function applyAdminUI() {
     sidebarAdminBadge.classList.toggle('hidden', !isAdmin);
-    addBlockBtn.classList.toggle('hidden', !isAdmin);
     emptyAddBtn.classList.toggle('hidden', !isAdmin);
     viewActions.classList.toggle('hidden', !isAdmin);
     addHomeImageBtn.classList.toggle('hidden', !isAdmin);
+    if (!isAdmin) exitOrderAdjustMode();
+    updateOrderAdjustButtons();
   }
 
   function syncAdminUIFromGlobal() {
@@ -640,6 +643,7 @@
       `;
       head.addEventListener('click', () => {
         clearSearch();
+        exitOrderAdjustMode();
         currentView = 'category';
         selection = { categoryId: cat.id, subcategoryId: null };
         renderSidebar();
@@ -656,6 +660,7 @@
         subBtn.addEventListener('click', (e) => {
           e.stopPropagation();
           clearSearch();
+          exitOrderAdjustMode();
           currentView = 'category';
           selection = { categoryId: cat.id, subcategoryId: sub.id };
           renderSidebar();
@@ -714,6 +719,7 @@
 
   sidebarHomeBtn.addEventListener('click', () => {
     clearSearch();
+    exitOrderAdjustMode();
     currentView = 'home';
     renderSidebar();
     renderMain();
@@ -725,25 +731,18 @@
     return CATEGORIES.find(c => c.id === selection.categoryId);
   }
 
+  // "전체"(1차 카테고리 전체 보기)는 항상 순수 가나다순이고, 2차 카테고리
+  // 하나만 볼 때만 그 2차 카테고리에 저장된 수동 정렬(있다면)을 반영한다.
   function visibleBlocks() {
     const cat = currentCategory();
     if (!cat) return [];
-    let blocks;
     if (selection.subcategoryId) {
-      blocks = allBlocks.filter(b => b.subcategoryId === selection.subcategoryId);
-    } else {
-      const subIds = cat.subs.map(s => s.id);
-      blocks = allBlocks.filter(b => subIds.includes(b.subcategoryId));
+      const blocks = allBlocks.filter(b => b.subcategoryId === selection.subcategoryId);
+      return orderedBlocksForSub(selection.subcategoryId, blocks);
     }
-    const sorted = blocks.slice();
-    if (sortOrder === 'newest') {
-      sorted.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-    } else if (sortOrder === 'oldest') {
-      sorted.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
-    } else {
-      sorted.sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ko'));
-    }
-    return sorted;
+    const subIds = cat.subs.map(s => s.id);
+    const blocks = allBlocks.filter(b => subIds.includes(b.subcategoryId));
+    return alphaSortedBlocks(blocks);
   }
 
   function renderBreadcrumb() {
@@ -755,6 +754,7 @@
     } else {
       breadcrumb.innerHTML = `${cat.name} <i data-lucide="chevron-right"></i> <span class="crumb-muted">전체</span>`;
     }
+    updateOrderAdjustButtons();
     icons();
   }
 
@@ -786,6 +786,19 @@
   }
 
   function renderGrid() {
+    if (orderAdjustMode) {
+      blockGrid.innerHTML = '';
+      emptyState.classList.add('hidden');
+      blockGrid.classList.remove('hidden');
+      const byId = new Map(allBlocks.map(b => [b.id, b]));
+      workingOrder.forEach(id => {
+        const block = byId.get(id);
+        if (block) blockGrid.appendChild(buildOrderAdjustCardElement(block));
+      });
+      icons();
+      return;
+    }
+
     const blocks = visibleBlocks();
     blockGrid.innerHTML = '';
 
@@ -864,6 +877,7 @@
   searchInput.addEventListener('input', () => {
     searchQuery = searchInput.value;
     searchClearBtn.classList.toggle('hidden', !searchQuery);
+    exitOrderAdjustMode();
     renderMain();
   });
 
@@ -1099,36 +1113,130 @@
     }
   });
 
-  sortDropdownBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const willOpen = sortDropdownMenu.classList.contains('hidden');
-    sortDropdownMenu.classList.toggle('hidden', !willOpen);
-    sortDropdown.classList.toggle('open', willOpen);
-    sortDropdownBtn.setAttribute('aria-expanded', String(willOpen));
-  });
-
-  function closeSortDropdown() {
-    sortDropdownMenu.classList.add('hidden');
-    sortDropdown.classList.remove('open');
-    sortDropdownBtn.setAttribute('aria-expanded', 'false');
+  // ---------- 정렬 조정 (드래그로 가나다순 일부 바꾸기) ----------
+  function isOrderAdjustAvailable() {
+    return currentView === 'category' && !!selection.subcategoryId && isAdmin;
   }
 
-  sortDropdownMenu.querySelectorAll('.dropdown-option').forEach(opt => {
-    opt.addEventListener('click', () => {
-      sortOrder = opt.dataset.value;
-      sortDropdownLabel.textContent = opt.textContent;
-      sortDropdownMenu.querySelectorAll('.dropdown-option').forEach(o => {
-        o.classList.toggle('active', o === opt);
-        o.setAttribute('aria-selected', String(o === opt));
+  function updateOrderAdjustButtons() {
+    orderAdjustBtn.classList.toggle('hidden', !isOrderAdjustAvailable() || orderAdjustMode);
+    orderAdjustActions.classList.toggle('hidden', !orderAdjustMode);
+    addBlockBtn.classList.toggle('hidden', !isAdmin || orderAdjustMode);
+  }
+
+  function alphaSortedBlocks(blocks) {
+    return blocks.slice().sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ko'));
+  }
+
+  // 저장된 순서(subOrders)가 있으면 그 순서를 따르되, 그 뒤에 추가되어 아직
+  // 저장된 순서에 없는 카드는 가나다순 상대 위치 그대로 맨 뒤에 붙인다.
+  function orderedBlocksForSub(subId, blocks) {
+    const alpha = alphaSortedBlocks(blocks);
+    const savedOrder = subOrders[subId];
+    if (!savedOrder || !savedOrder.length) return alpha;
+    const byId = new Map(alpha.map(b => [b.id, b]));
+    const known = savedOrder.filter(id => byId.has(id)).map(id => byId.get(id));
+    const knownIds = new Set(known.map(b => b.id));
+    const missing = alpha.filter(b => !knownIds.has(b.id));
+    return [...known, ...missing];
+  }
+
+  function enterOrderAdjustMode() {
+    if (!isOrderAdjustAvailable()) return;
+    const blocks = allBlocks.filter(b => b.subcategoryId === selection.subcategoryId);
+    workingOrder = orderedBlocksForSub(selection.subcategoryId, blocks).map(b => b.id);
+    orderAdjustMode = true;
+    updateOrderAdjustButtons();
+    renderGrid();
+  }
+
+  function exitOrderAdjustMode() {
+    if (!orderAdjustMode) return;
+    orderAdjustMode = false;
+    workingOrder = [];
+    updateOrderAdjustButtons();
+    renderGrid();
+  }
+
+  async function saveOrderAdjustMode() {
+    const subId = selection.subcategoryId;
+    orderAdjustSaveBtn.disabled = true;
+    try {
+      await LookbookFirebase.saveSubOrder(subId, workingOrder);
+      orderAdjustMode = false;
+      workingOrder = [];
+      updateOrderAdjustButtons();
+      renderGrid();
+      toast('정렬을 저장했어요.');
+    } catch (err) {
+      console.error(err);
+      toast('저장에 실패했어요. 네트워크를 확인해주세요.');
+    } finally {
+      orderAdjustSaveBtn.disabled = false;
+    }
+  }
+
+  orderAdjustBtn.addEventListener('click', enterOrderAdjustMode);
+  orderAdjustCancelBtn.addEventListener('click', exitOrderAdjustMode);
+  orderAdjustSaveBtn.addEventListener('click', saveOrderAdjustMode);
+
+  let dragOrderId = null;
+
+  function reorderWorkingOrder(fromId, toId, after) {
+    const fromIndex = workingOrder.indexOf(fromId);
+    if (fromIndex === -1) return;
+    workingOrder.splice(fromIndex, 1);
+    let toIndex = workingOrder.indexOf(toId);
+    if (toIndex === -1) { workingOrder.push(fromId); return; }
+    if (after) toIndex += 1;
+    workingOrder.splice(toIndex, 0, fromId);
+  }
+
+  function buildOrderAdjustCardElement(block) {
+    const thumbCount = (block.thumbnailIds && block.thumbnailIds.length) || (allImages(block).length ? 1 : 0);
+    const card = document.createElement('article');
+    card.className = 'card order-adjust-card';
+    card.draggable = true;
+    card.innerHTML = `
+      <span class="order-drag-handle"><i data-lucide="grip-vertical"></i></span>
+      <div class="card-thumb thumb-count-${thumbCount}">
+        ${thumbnailHTML(block)}
+      </div>
+      <div class="card-title">${escapeHTML(block.title || '(제목 없음)')}</div>
+    `;
+    card.addEventListener('dragstart', (e) => {
+      dragOrderId = block.id;
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', block.id);
+    });
+    card.addEventListener('dragend', () => {
+      dragOrderId = null;
+      blockGrid.querySelectorAll('.order-adjust-card').forEach(el => {
+        el.classList.remove('dragging', 'drag-over-top', 'drag-over-bottom');
       });
-      closeSortDropdown();
+    });
+    card.addEventListener('dragover', (e) => {
+      if (dragOrderId === null) return;
+      e.preventDefault();
+      const isAfter = (e.clientY - card.getBoundingClientRect().top) > card.offsetHeight / 2;
+      card.classList.toggle('drag-over-top', !isAfter);
+      card.classList.toggle('drag-over-bottom', isAfter);
+    });
+    card.addEventListener('dragleave', () => {
+      card.classList.remove('drag-over-top', 'drag-over-bottom');
+    });
+    card.addEventListener('drop', (e) => {
+      e.preventDefault();
+      card.classList.remove('drag-over-top', 'drag-over-bottom');
+      if (dragOrderId === null || dragOrderId === block.id) return;
+      const isAfter = (e.clientY - card.getBoundingClientRect().top) > card.offsetHeight / 2;
+      reorderWorkingOrder(dragOrderId, block.id, isAfter);
+      dragOrderId = null;
       renderGrid();
     });
-  });
-
-  document.addEventListener('click', (e) => {
-    if (!sortDropdown.contains(e.target)) closeSortDropdown();
-  });
+    return card;
+  }
 
   // ---------- 상세 보기 모달 ----------
   function referenceToggleViewHTML(seg) {
@@ -2054,6 +2162,10 @@
     LookbookFirebase.subscribeHomeImages(items => {
       homeImages = items;
       if (currentView === 'home') renderHomeView();
+    });
+    LookbookFirebase.subscribeSubOrders(orders => {
+      subOrders = orders;
+      if (currentView === 'category' && !orderAdjustMode) renderGrid();
     });
   });
 })();

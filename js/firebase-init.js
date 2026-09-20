@@ -155,6 +155,24 @@ async function saveHomeImages(items) {
   await setDoc(doc(adminDb, "home", "main"), { items });
 }
 
+// ---------- 2차 카테고리별 수동 정렬 ----------
+// 기본은 항상 가나다순이고, 사용자가 "정렬 조정"에서 드래그로 바꾼 2차
+// 카테고리만 문서 하나(subOrders/{subcategoryId})를 갖는다. 문서가 없는
+// 2차 카테고리는 그냥 가나다순 그대로 보여준다.
+const SUB_ORDERS_COLLECTION = "subOrders";
+
+function subscribeSubOrders(callback) {
+  return onSnapshot(collection(db, SUB_ORDERS_COLLECTION), (snapshot) => {
+    const orders = {};
+    snapshot.docs.forEach((d) => { orders[d.id] = d.data().order || []; });
+    callback(orders);
+  });
+}
+
+async function saveSubOrder(subcategoryId, order) {
+  await setDoc(doc(adminDb, SUB_ORDERS_COLLECTION, subcategoryId), { order });
+}
+
 window.LookbookFirebase = {
   signIn,
   logout,
@@ -163,6 +181,8 @@ window.LookbookFirebase = {
   removeBlock,
   subscribeHomeImages,
   saveHomeImages,
+  subscribeSubOrders,
+  saveSubOrder,
   verifyAdminPassword,
   logoutAdmin
 };

@@ -398,6 +398,36 @@ input, textarea, select {
   box-shadow: var(--shadow);
 }
 
+/* ---------- 정렬 조정 ---------- */
+.order-adjust-actions { display: flex; align-items: center; gap: 8px; }
+
+.order-adjust-card {
+  position: relative;
+  cursor: grab;
+}
+.order-adjust-card:active { cursor: grabbing; }
+.order-adjust-card:hover { transform: none; box-shadow: none; }
+.order-adjust-card.dragging { opacity: 0.4; }
+.order-adjust-card.drag-over-top { box-shadow: inset 0 3px 0 0 var(--accent); }
+.order-adjust-card.drag-over-bottom { box-shadow: inset 0 -3px 0 0 var(--accent); }
+
+.order-drag-handle {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(35, 30, 60, 0.55);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+  pointer-events: none;
+}
+.order-drag-handle svg { width: 14px; height: 14px; }
+
 .card-thumb {
   aspect-ratio: 16 / 9;
   background: var(--surface-alt);
@@ -1274,7 +1304,17 @@ input, textarea, select {
   #sidebar.open { transform: translateX(0); }
   #main { padding: 70px 16px 50px; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
-  .search-input-wrap { width: 100%; }
+  /* 사이드바를 여는 햄버거 아이콘과 같은 줄에 오도록, 검색창을 그 오른쪽
+     남는 자리에 고정한다. 자리가 좁아지는 만큼 검색창도 자연히 작아진다. */
+  .search-bar {
+    position: fixed;
+    top: 14px;
+    left: 60px;
+    right: 14px;
+    z-index: 85;
+    margin-bottom: 0;
+  }
+  .search-input-wrap { width: 100%; padding: 8px 12px; }
   .modal { padding: 20px; }
   .gallery-row { gap: 6px; }
   .gallery-row.multi { flex-wrap: wrap; align-items: flex-start; }
