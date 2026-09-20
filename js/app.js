@@ -676,7 +676,7 @@
     // 아니라 클릭하면 매칭되는 카테고리의 카드를 표로 모아 보여주는 창을 연다.
     if (isAdmin) {
       const todoEl = document.createElement('div');
-      todoEl.className = 'nav-category' + (todoNavOpen ? ' open' : '');
+      todoEl.className = 'nav-category todo-category' + (todoNavOpen ? ' open' : '');
 
       const todoHead = document.createElement('button');
       todoHead.type = 'button';
