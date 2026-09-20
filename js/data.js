@@ -71,3 +71,29 @@ function findSub(subId) {
   if (!cat) return null;
   return cat.subs.find(s => s.id === subId);
 }
+
+// 관리자 전용 "To Do" 카테고리. CATEGORIES 배열에는 넣지 않는다 — 이 2차
+// 카테고리들은 실제 카드를 담는 곳이 아니라, 같은 순번의 CATEGORIES 항목과
+// 매칭되어 그 카테고리의 카드를 표 형태로 모아 보여주는 별도 화면을 여는
+// 용도라서, 카드 배정 드롭다운/검색 등 CATEGORIES를 도는 다른 로직에 섞이면
+// 안 된다. subs 순서가 CATEGORIES 배열 순서와 1:1로 대응한다(i번째 <-> i번째).
+const TODO_CATEGORY = {
+  id: 'todo',
+  name: 'To Do',
+  icon: 'list-todo', // 아이콘은 나중에 원하는 걸로 교체하면 됨
+  subs: [
+    { id: 'todo-jung-yun', name: '珠雪ゆん' },
+    { id: 'todo-hyun-gaeul', name: '윤가을' },
+    { id: 'todo-yeongseok', name: '樹跡夕' },
+    { id: 'todo-ghimer', name: 'Mer Danika' },
+    { id: 'todo-sirene', name: 'René' },
+    { id: 'todo-samryeon', name: '鳥飼蓮 / 윤하리' }
+  ]
+};
+
+// To Do 2차 카테고리 하나를 받아, 순번이 매칭되는 실제(CATEGORIES) 1차
+// 카테고리를 돌려준다.
+function todoMatchedCategory(todoSubId) {
+  const idx = TODO_CATEGORY.subs.findIndex(s => s.id === todoSubId);
+  return idx > -1 ? CATEGORIES[idx] : null;
+}

@@ -271,6 +271,35 @@
   </div>
 </div>
 
+<!-- To Do 표 -->
+<div id="todoModal" class="modal-overlay hidden">
+  <div class="modal todo-modal">
+    <button class="modal-close" data-close-todo><i data-lucide="x"></i></button>
+    <div class="todo-modal-header">
+      <h2 id="todoModalTitle"></h2>
+      <div class="dropdown" id="todoSubDropdown">
+        <button type="button" class="dropdown-btn" id="todoSubDropdownBtn" aria-haspopup="listbox" aria-expanded="false">
+          <span class="dropdown-label" id="todoSubDropdownLabel"></span>
+          <i data-lucide="chevron-down" class="dropdown-chevron"></i>
+        </button>
+        <ul class="dropdown-menu hidden" id="todoSubDropdownMenu" role="listbox"></ul>
+      </div>
+    </div>
+    <div class="todo-table-wrap">
+      <table class="todo-table">
+        <thead>
+          <tr><th>제목</th><th>완료</th><th>일러스트</th></tr>
+        </thead>
+        <tbody id="todoTableBody"></tbody>
+      </table>
+    </div>
+    <div id="todoEmptyState" class="empty-state hidden">
+      <i data-lucide="inbox"></i>
+      <p>이 카테고리에 해당하는 카드가 없어요.</p>
+    </div>
+  </div>
+</div>
+
 <!-- 레퍼런스 이미지 원본 보기 -->
 <div id="imageLightbox" class="image-lightbox hidden">
   <button type="button" class="modal-close" data-close-lightbox><i data-lucide="x"></i></button>

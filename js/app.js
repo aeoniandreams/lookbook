@@ -8,6 +8,9 @@
   let currentBlockId = null;
   let workingSegments = []; // [{type:'text', id, text}] | [{type:'image', id, images:[{id,url}]}]
   let workingThumbnailIds = []; // 최대 2개, 선택 순서 유지
+  let workingTodoImageIds = []; // To Do 표 일러스트 칸에 쓸, 갤러리 토글 안에서 고른 이미지. 최대 2개
+  let todoNavOpen = false; // 사이드바의 "To Do" 카테고리 펼침 상태
+  let currentTodoSub = null; // { sub, matchedCategory, selectedSubId } | null — 지금 열려있는 To Do 표
 
   const $ = sel => document.querySelector(sel);
 
@@ -63,6 +66,19 @@
   const searchResultsList = $('#searchResultsList');
   const searchEmptyState = $('#searchEmptyState');
   let searchQuery = '';
+
+  const todoModal = $('#todoModal');
+  const todoModalTitle = $('#todoModalTitle');
+  const todoSubDropdownSelect = createDropdown($('#todoSubDropdown'), {
+    onSelect: (subId) => {
+      if (!currentTodoSub) return;
+      currentTodoSub.selectedSubId = subId;
+      renderTodoTable();
+    }
+  });
+  const todoTableBody = $('#todoTableBody');
+  const todoTable = $('.todo-table');
+  const todoEmptyState = $('#todoEmptyState');
 
   const sidebarUsernameBtn = $('#sidebarUsernameBtn');
   const sidebarAdminBadge = $('#sidebarAdminBadge');
@@ -249,6 +265,7 @@
   window.addEventListener('admin-auth-changed', (e) => {
     isAdmin = !!(e.detail && e.detail.isAdmin);
     applyAdminUI();
+    renderSidebar(); // "To Do" 카테고리는 관리자 모드에서만 보여서, 전환될 때마다 다시 그려야 한다
   });
   syncAdminUIFromGlobal();
 
@@ -654,6 +671,46 @@
       catEl.appendChild(subList);
       categoryNav.appendChild(catEl);
     });
+
+    // "To Do" 카테고리: 관리자 모드에서만 보이고, 카드를 담는 실제 카테고리가
+    // 아니라 클릭하면 매칭되는 카테고리의 카드를 표로 모아 보여주는 창을 연다.
+    if (isAdmin) {
+      const todoEl = document.createElement('div');
+      todoEl.className = 'nav-category' + (todoNavOpen ? ' open' : '');
+
+      const todoHead = document.createElement('button');
+      todoHead.type = 'button';
+      todoHead.className = 'nav-category-head';
+      todoHead.innerHTML = `
+        <span class="cat-icon">${iconHTML(TODO_CATEGORY.icon)}</span>
+        <span class="cat-name">${TODO_CATEGORY.name}</span>
+        <i data-lucide="chevron-down" class="chevron"></i>
+      `;
+      todoHead.addEventListener('click', () => {
+        todoNavOpen = !todoNavOpen;
+        renderSidebar();
+      });
+
+      const todoSubList = document.createElement('div');
+      todoSubList.className = 'nav-sub-list';
+      TODO_CATEGORY.subs.forEach(sub => {
+        const subBtn = document.createElement('button');
+        subBtn.type = 'button';
+        subBtn.className = 'nav-sub-item';
+        subBtn.innerHTML = `<span>${sub.name}</span>`;
+        subBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          openTodoModal(sub);
+          closeMobileSidebar();
+        });
+        todoSubList.appendChild(subBtn);
+      });
+
+      todoEl.appendChild(todoHead);
+      todoEl.appendChild(todoSubList);
+      categoryNav.appendChild(todoEl);
+    }
+
     icons();
   }
 
@@ -1203,6 +1260,97 @@
     }
   });
 
+  // ---------- To Do 표 ----------
+  // 제목이 "라벨 : 제목" 형식이면 라벨 부분은 떼고 제목만 돌려준다.
+  function stripLabelPrefix(title) {
+    const m = /^(.+?)\s*:\s*(.*)$/.exec(title || '');
+    return m ? m[2] : (title || '');
+  }
+
+  // 카드 안의 모든 갤러리 토글(레퍼런스 세그먼트) 항목을 모아서, 관리자가
+  // To Do 표용으로 고른(todoImageIds) 것만 그 순서대로 돌려준다.
+  function todoImageThumbs(block) {
+    const allRefItems = migrateBlockToSegments(block)
+      .filter(seg => seg.type === 'reference')
+      .flatMap(seg => seg.items || []);
+    return (block.todoImageIds || [])
+      .map(id => allRefItems.find(it => it.id === id))
+      .filter(Boolean);
+  }
+
+  function openTodoModal(sub) {
+    const matchedCategory = todoMatchedCategory(sub.id);
+    if (!matchedCategory) return;
+    currentTodoSub = { sub, matchedCategory, selectedSubId: matchedCategory.subs[0].id };
+    todoModalTitle.textContent = sub.name;
+    todoSubDropdownSelect.setOptions(
+      matchedCategory.subs.map(s => ({ value: s.id, label: s.name })),
+      currentTodoSub.selectedSubId
+    );
+    renderTodoTable();
+    todoModal.classList.remove('hidden');
+    icons();
+  }
+
+  function closeTodoModal() {
+    todoModal.classList.add('hidden');
+    currentTodoSub = null;
+  }
+
+  function renderTodoTable() {
+    if (!currentTodoSub) return;
+    const blocks = allBlocks
+      .filter(b => b.subcategoryId === currentTodoSub.selectedSubId)
+      .slice()
+      .sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ko'));
+
+    todoTableBody.innerHTML = '';
+
+    if (!blocks.length) {
+      todoTable.classList.add('hidden');
+      todoEmptyState.classList.remove('hidden');
+      icons();
+      return;
+    }
+    todoTable.classList.remove('hidden');
+    todoEmptyState.classList.add('hidden');
+
+    blocks.forEach(block => {
+      const thumbs = todoImageThumbs(block);
+      const thumbsHTML = thumbs.length
+        ? thumbs.map(it => `<img src="${escapeAttr(it.url)}" alt="" loading="lazy">`).join('')
+        : `<span class="todo-no-image">-</span>`;
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><button type="button" class="todo-title-btn">${escapeHTML(stripLabelPrefix(block.title))}</button></td>
+        <td><input type="checkbox" class="todo-check" ${block.todoDone ? 'checked' : ''}></td>
+        <td><div class="todo-thumbs">${thumbsHTML}</div></td>
+      `;
+      tr.querySelector('.todo-title-btn').addEventListener('click', () => {
+        closeTodoModal();
+        openViewModal(block.id);
+      });
+      tr.querySelector('.todo-check').addEventListener('change', async (e) => {
+        const checked = e.target.checked;
+        try {
+          await LookbookFirebase.saveBlock({ id: block.id, todoDone: checked });
+        } catch (err) {
+          console.error(err);
+          toast('저장에 실패했어요. 네트워크를 확인해주세요.');
+          e.target.checked = !checked;
+        }
+      });
+      todoTableBody.appendChild(tr);
+    });
+    icons();
+  }
+
+  $('[data-close-todo]').addEventListener('click', closeTodoModal);
+  todoModal.addEventListener('click', e => {
+    if (e.target === todoModal) closeTodoModal();
+  });
+
   // 정렬 드롭다운과 같은 커스텀 레이아웃의 선택 목록. 클릭으로 열고 닫고,
   // 옵션을 고르면 강조 표시와 라벨을 갱신한다. setOptions로 프로그램적으로
   // 선택값을 지정하는 것과 사용자가 실제로 클릭해서 고르는 것을 구분해서,
@@ -1306,6 +1454,7 @@
       })
       : [];
     workingThumbnailIds = block ? [...(block.thumbnailIds || [])] : [];
+    workingTodoImageIds = block ? [...(block.todoImageIds || [])] : [];
 
     const defaultCat = block ? findCategoryBySub(block.subcategoryId).id : (selection.categoryId || CATEGORIES[0].id);
     const defaultSub = block ? block.subcategoryId : (selection.subcategoryId || CATEGORIES.find(c => c.id === defaultCat).subs[0].id);
@@ -1323,6 +1472,7 @@
     currentBlockId = null;
     workingSegments = [];
     workingThumbnailIds = [];
+    workingTodoImageIds = [];
   }
 
   // 저장하지 않고 닫으려 할 때(뒤로가기/바깥 클릭/Esc) 확인창을 띄우기 위해,
@@ -1333,6 +1483,7 @@
       title: editTitleInput.value,
       subcategoryId: editSubcategorySelect.value,
       thumbnailIds: workingThumbnailIds,
+      todoImageIds: workingTodoImageIds,
       segments: workingSegments
     });
   }
@@ -1341,6 +1492,7 @@
       title: editTitleInput.value,
       subcategoryId: editSubcategorySelect.value,
       thumbnailIds: workingThumbnailIds,
+      todoImageIds: workingTodoImageIds,
       segments: workingSegments
     });
   }
@@ -1439,6 +1591,8 @@
     const seg = workingSegments[index];
     workingThumbnailIds = workingThumbnailIds.filter(id =>
       !(seg.type === 'image' && seg.images.some(img => img.id === id)));
+    workingTodoImageIds = workingTodoImageIds.filter(id =>
+      !(seg.type === 'reference' && seg.items.some(it => it.id === id)));
     workingSegments.splice(index, 1);
     renderSegmentList();
   }
@@ -1494,6 +1648,7 @@
   function buildReferenceItemRow(item, seg) {
     const row = document.createElement('div');
     row.className = 'reference-manage-row';
+    const todoIndex = workingTodoImageIds.indexOf(item.id);
     row.innerHTML = `
       <span class="reference-drag-handle" draggable="true" title="드래그해서 순서 바꾸기"><i data-lucide="grip-vertical"></i></span>
       <img class="reference-manage-thumb" src="${escapeAttr(item.url)}" alt="" onerror="this.classList.add('broken')">
@@ -1501,6 +1656,9 @@
         <input type="url" class="reference-url-input" placeholder="이미지 주소(URL)" value="${escapeAttr(item.url || '')}">
         <input type="text" class="reference-comment-input" placeholder="코멘트 (선택)" value="${escapeAttr(item.comment || '')}">
       </div>
+      <button type="button" class="reference-todo-toggle${todoIndex > -1 ? ' selected' : ''}" title="To Do 표 일러스트로 선택">
+        ${todoIndex > -1 ? `<span class="thumb-badge">${todoIndex + 1}</span>` : `<i data-lucide="star"></i>`}
+      </button>
       <button type="button" class="reference-remove-btn" title="삭제"><i data-lucide="x"></i></button>
     `;
     const thumb = row.querySelector('.reference-manage-thumb');
@@ -1512,8 +1670,22 @@
     row.querySelector('.reference-comment-input').addEventListener('input', (e) => {
       item.comment = e.target.value;
     });
+    row.querySelector('.reference-todo-toggle').addEventListener('click', () => {
+      const idx = workingTodoImageIds.indexOf(item.id);
+      if (idx > -1) {
+        workingTodoImageIds.splice(idx, 1);
+      } else {
+        if (workingTodoImageIds.length >= 2) {
+          toast('To Do 표 일러스트는 최대 2개까지 선택할 수 있어요.');
+          return;
+        }
+        workingTodoImageIds.push(item.id);
+      }
+      renderSegmentList();
+    });
     row.querySelector('.reference-remove-btn').addEventListener('click', () => {
       seg.items = seg.items.filter(i => i.id !== item.id);
+      workingTodoImageIds = workingTodoImageIds.filter(id => id !== item.id);
       renderSegmentList();
     });
 
@@ -1816,6 +1988,7 @@
         });
 
       const savedImageIds = segments.filter(s => s.type === 'image').flatMap(s => s.images.map(img => img.id));
+      const savedReferenceItemIds = segments.filter(s => s.type === 'reference').flatMap(s => s.items.map(it => it.id));
 
       const block = {
         id: blockId,
@@ -1823,6 +1996,7 @@
         title,
         segments,
         thumbnailIds: workingThumbnailIds.filter(id => savedImageIds.includes(id)),
+        todoImageIds: workingTodoImageIds.filter(id => savedReferenceItemIds.includes(id)),
         createdAt: existing ? existing.createdAt || Date.now() : Date.now(),
         updatedAt: Date.now()
       };
@@ -1834,6 +2008,7 @@
       currentBlockId = null;
       workingSegments = [];
       workingThumbnailIds = [];
+      workingTodoImageIds = [];
       editModal.classList.add('hidden');
       toast('저장했어요.');
     } catch (err) {
@@ -1866,6 +2041,7 @@
     else if (!homeEditModal.classList.contains('hidden')) requestCloseHomeEditModal();
     else if (!editModal.classList.contains('hidden')) requestCloseEditModal();
     else if (!viewModal.classList.contains('hidden')) closeViewModal();
+    else if (!todoModal.classList.contains('hidden')) closeTodoModal();
   });
 
   // ---------- 초기화 (Firebase 로그인 완료 후 시작) ----------
@@ -1875,6 +2051,7 @@
       allBlocks = blocks;
       renderSidebar();
       renderMain();
+      if (!todoModal.classList.contains('hidden')) renderTodoTable();
     });
     LookbookFirebase.subscribeHomeImages(items => {
       homeImages = items;

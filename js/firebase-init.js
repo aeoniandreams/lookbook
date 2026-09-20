@@ -131,8 +131,11 @@ if (adminAuth) {
   });
 }
 
+// merge: true로 저장한다 — To Do 표의 체크박스(todoDone)처럼 카드 수정창이
+// 다루지 않는 필드도 따로 저장될 수 있는데, merge 없이 통째로 덮어쓰면
+// 카드 수정창에서 다른 내용을 저장할 때마다 그 필드가 같이 지워져버린다.
 async function saveBlock(block) {
-  await setDoc(doc(adminDb, BLOCKS_COLLECTION, block.id), block);
+  await setDoc(doc(adminDb, BLOCKS_COLLECTION, block.id), block, { merge: true });
 }
 
 async function removeBlock(block) {

@@ -596,6 +596,60 @@ input, textarea, select {
 .modal-sm { max-width: 320px; padding: 32px 24px 24px; }
 .modal-sm .auth-box svg { color: var(--accent); }
 
+/* ---------- To Do 표 ---------- */
+.todo-modal { max-width: 760px; }
+
+.todo-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.todo-modal-header h2 { margin: 0; font-size: 19px; }
+
+.todo-table-wrap { overflow-x: auto; }
+
+.todo-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.todo-table th {
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+}
+.todo-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.todo-table tr:last-child td { border-bottom: none; }
+
+.todo-title-btn {
+  color: var(--accent-text);
+  font-weight: 600;
+  text-align: left;
+}
+.todo-title-btn:hover { text-decoration: underline; }
+
+.todo-check { width: 16px; height: 16px; cursor: pointer; }
+
+.todo-thumbs { display: flex; gap: 6px; }
+.todo-thumbs img {
+  width: 48px;
+  height: 48px;
+  object-fit: cover;
+  border-radius: 7px;
+  background: var(--surface-alt);
+  cursor: zoom-in;
+}
+.todo-no-image { color: var(--text-muted); font-size: 12px; }
+
 /* ---------- 이미지 원본 보기(라이트박스) ---------- */
 .image-lightbox {
   position: fixed;
@@ -832,6 +886,17 @@ input, textarea, select {
 }
 .reference-remove-btn:hover { background: var(--surface-alt); color: var(--danger); }
 .reference-remove-btn svg { width: 14px; height: 14px; }
+
+.reference-todo-toggle {
+  flex-shrink: 0;
+  width: 30px; height: 30px;
+  border-radius: 999px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-muted);
+}
+.reference-todo-toggle:hover { background: var(--surface-alt); color: var(--text); }
+.reference-todo-toggle.selected { background: var(--accent); color: #fff; }
+.reference-todo-toggle svg { width: 14px; height: 14px; }
 .reference-drag-handle {
   flex-shrink: 0;
   display: inline-flex;
