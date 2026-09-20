@@ -641,6 +641,11 @@ input, textarea, select {
   color: var(--text-muted);
   border-bottom: 1px solid var(--border);
 }
+/* "일러스트" 헤더가 좁아져서 줄바꿈될 때, 아무 데서나(예: 일러스/트)가
+   아니라 항상 "일러 / 스트"로만 끊기게 한다. 두 글자씩 nowrap으로 묶고
+   그 사이에만 줄바꿈 지점(wbr)을 둬서, 공간이 충분하면 한 줄로 그대로
+   보이고 좁을 때만 그 지점에서 끊긴다. */
+.todo-table th .nowrap-2 { white-space: nowrap; }
 .todo-table td {
   padding: 8px 10px;
   border-bottom: 1px solid var(--border);
