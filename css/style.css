@@ -654,7 +654,7 @@ input, textarea, select {
 .todo-table tr:last-child td { border-bottom: none; }
 
 .todo-title-btn {
-  color: var(--accent-text);
+  color: var(--text);
   font-weight: 600;
   text-align: left;
 }
