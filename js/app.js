@@ -1307,7 +1307,7 @@
     const blocks = allBlocks
       .filter(b => b.subcategoryId === currentTodoSub.selectedSubId)
       .slice()
-      .sort((a, b) => (a.title || '').localeCompare(b.title || '', 'ko'));
+      .sort((a, b) => yearMonthValue(a) - yearMonthValue(b));
 
     todoTableBody.innerHTML = '';
 
