@@ -21,12 +21,14 @@ window.FIREBASE_AUTH_EMAIL = "user@gmail.com";
 // 사용자로 관리해요. 사이드바에서 관리자 모드로 전환할 때 입력한 비밀번호를
 // 이 계정으로 실제 로그인해서 확인하고, 카드 저장/삭제도 전부 이 계정을 통해
 // 나가요. Firestore 보안 규칙에서 쓰기(write)를 이 이메일로 로그인된 경우만
-// 허용하도록 설정해야 실제로 안전해져요 (콘솔 → Firestore Database → Rules):
+// 허용하도록 설정해야 실제로 안전해져요 (콘솔 → Firestore Database → Rules).
+// blocks/home/subOrders처럼 컬렉션이 늘어날 때마다 규칙을 일일이 늘리지
+// 않도록, 데이터베이스 전체에 대해 한 번에 허용하는 편이 관리하기 편해요:
 //
 //   rules_version = '2';
 //   service cloud.firestore {
 //     match /databases/{database}/documents {
-//       match /blocks/{blockId} {
+//       match /{document=**} {
 //         allow read: if request.auth != null;
 //         allow write: if request.auth != null
 //                      && request.auth.token.email == "aeoniandreams@gmail.com";
