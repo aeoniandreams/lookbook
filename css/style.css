@@ -1300,4 +1300,5 @@ input, textarea, select {
   .gallery-comment { font-size: 10px; }
   .view-text-block { font-size: 13px; }
   .reference-toggle-header { font-size: 13px; }
+  .breadcrumb { font-size: 18px; }
 }
