@@ -10,6 +10,7 @@
   --bg: #ffffff;
   --surface: #ffffff;
   --surface-alt: #ece8f9;
+  --thumb-bg: #f6f4fc; /* 원래 사이트 바탕색 — 카드 썸네일 기본 색상으로 재사용 */
   --border: #ddd6f0;
   --text: #2e2a45;
   --text-muted: #8b84a8;
@@ -400,7 +401,7 @@ input, textarea, select {
 
 .card-thumb {
   aspect-ratio: 16 / 9;
-  background: var(--surface-alt);
+  background: var(--thumb-bg);
   display: flex;
 }
 .thumb-half {
