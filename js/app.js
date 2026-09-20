@@ -50,8 +50,7 @@
   });
   const editSubcategorySelect = createDropdown($('#editSubcategoryDropdown'));
   const editTitleInput = $('#editTitleInput');
-  const editYearInput = $('#editYearInput');
-  const editMonthInput = $('#editMonthInput');
+  const editYearMonthInput = $('#editYearMonthInput');
   const editSegmentList = $('#editSegmentList');
   const addTextSegmentBtn = $('#addTextSegmentBtn');
   const addImageSegmentBtn = $('#addImageSegmentBtn');
@@ -732,6 +731,22 @@
   function yearMonthValue(block) {
     if (!block.year) return 0;
     return block.year * 12 + (block.month || 0);
+  }
+
+  // "년월" 입력칸: "2026.03." / "2026.3" / "2026" 같은 표기를 년/월로 해석한다.
+  function parseYearMonth(str) {
+    const trimmed = (str || '').trim();
+    if (!trimmed) return { year: null, month: null };
+    const m = /^(\d{4})(?:\.(\d{1,2}))?\.?$/.exec(trimmed);
+    if (!m) return { year: null, month: null };
+    const year = parseInt(m[1], 10);
+    const month = m[2] ? parseInt(m[2], 10) : null;
+    return { year, month: (month >= 1 && month <= 12) ? month : null };
+  }
+
+  function formatYearMonth(block) {
+    if (!block || !block.year) return '';
+    return block.month ? `${block.year}.${String(block.month).padStart(2, '0')}.` : `${block.year}.`;
   }
 
   function visibleBlocks() {
@@ -1439,8 +1454,7 @@
 
     editModalTitle.textContent = block ? '카드 수정' : '새 카드 추가';
     editTitleInput.value = block ? block.title || '' : '';
-    editYearInput.value = block && block.year ? block.year : '';
-    editMonthInput.value = block && block.month ? block.month : '';
+    editYearMonthInput.value = formatYearMonth(block);
     workingSegments = block
       ? migrateBlockToSegments(block).map(seg => {
         if (seg.type === 'text') return { type: 'text', id: seg.id, text: seg.text || '' };
@@ -1488,8 +1502,7 @@
   function captureEditModalSnapshot() {
     editModalSnapshot = JSON.stringify({
       title: editTitleInput.value,
-      year: editYearInput.value,
-      month: editMonthInput.value,
+      yearMonth: editYearMonthInput.value,
       subcategoryId: editSubcategorySelect.value,
       thumbnailIds: workingThumbnailIds,
       todoImageIds: workingTodoImageIds,
@@ -1499,8 +1512,7 @@
   function isEditModalDirty() {
     return editModalSnapshot !== JSON.stringify({
       title: editTitleInput.value,
-      year: editYearInput.value,
-      month: editMonthInput.value,
+      yearMonth: editYearMonthInput.value,
       subcategoryId: editSubcategorySelect.value,
       thumbnailIds: workingThumbnailIds,
       todoImageIds: workingTodoImageIds,
@@ -1968,8 +1980,7 @@
     const blockId = currentBlockId;
     const subcategoryId = editSubcategorySelect.value;
     const existing = editingBlockId ? allBlocks.find(b => b.id === editingBlockId) : null;
-    const year = editYearInput.value ? parseInt(editYearInput.value, 10) : null;
-    const month = editMonthInput.value ? parseInt(editMonthInput.value, 10) : null;
+    const { year, month } = parseYearMonth(editYearMonthInput.value);
 
     editSaveBtn.disabled = true;
 
