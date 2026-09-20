@@ -398,36 +398,6 @@ input, textarea, select {
   box-shadow: var(--shadow);
 }
 
-/* ---------- 정렬 조정 ---------- */
-.order-adjust-actions { display: flex; align-items: center; gap: 8px; }
-
-.order-adjust-card {
-  position: relative;
-  cursor: grab;
-}
-.order-adjust-card:active { cursor: grabbing; }
-.order-adjust-card:hover { transform: none; box-shadow: none; }
-.order-adjust-card.dragging { opacity: 0.4; }
-.order-adjust-card.drag-over-top { box-shadow: inset 0 3px 0 0 var(--accent); }
-.order-adjust-card.drag-over-bottom { box-shadow: inset 0 -3px 0 0 var(--accent); }
-
-.order-drag-handle {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  background: rgba(35, 30, 60, 0.55);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2;
-  pointer-events: none;
-}
-.order-drag-handle svg { width: 14px; height: 14px; }
-
 .card-thumb {
   aspect-ratio: 16 / 9;
   background: var(--surface-alt);

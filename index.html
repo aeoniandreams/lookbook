@@ -121,12 +121,16 @@
     <header id="contentHeader">
       <div class="breadcrumb" id="breadcrumb"></div>
       <div class="header-actions">
-        <button type="button" id="orderAdjustBtn" class="secondary-btn admin-only hidden">
-          <i data-lucide="move-vertical"></i> 정렬 조정
-        </button>
-        <div id="orderAdjustActions" class="order-adjust-actions hidden">
-          <button type="button" id="orderAdjustCancelBtn" class="secondary-btn">취소</button>
-          <button type="button" id="orderAdjustSaveBtn" class="primary-btn"><i data-lucide="check"></i> 저장</button>
+        <div class="dropdown" id="sortDropdown">
+          <button type="button" class="dropdown-btn" id="sortDropdownBtn" aria-haspopup="listbox" aria-expanded="false">
+            <span class="dropdown-label" id="sortDropdownLabel">가나다순</span>
+            <i data-lucide="chevron-down" class="dropdown-chevron"></i>
+          </button>
+          <ul class="dropdown-menu hidden" id="sortDropdownMenu" role="listbox">
+            <li class="dropdown-option active" data-value="alpha" role="option" aria-selected="true">가나다순</li>
+            <li class="dropdown-option" data-value="newest" role="option" aria-selected="false">최신순</li>
+            <li class="dropdown-option" data-value="oldest" role="option" aria-selected="false">오래된순</li>
+          </ul>
         </div>
         <button id="addBlockBtn" class="primary-btn icon-only admin-only hidden" aria-label="카드 추가">
           <i data-lucide="plus"></i>
@@ -212,6 +216,18 @@
       <label>제목</label>
       <input type="text" id="editTitleInput" placeholder="카드 제목을 입력하세요" maxlength="100">
     </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>년</label>
+        <input type="number" id="editYearInput" placeholder="예: 2026" min="1900" max="2100" step="1">
+      </div>
+      <div class="field">
+        <label>월</label>
+        <input type="number" id="editMonthInput" placeholder="예: 3" min="1" max="12" step="1">
+      </div>
+    </div>
+    <p class="hint">정렬 드롭다운의 최신순/오래된순 기준이에요. 비워두면 가장 오래된 것으로 취급돼요.</p>
 
     <div class="field">
       <label>구성</label>
