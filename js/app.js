@@ -1298,6 +1298,12 @@
       .filter(Boolean);
   }
 
+  // 모바일 등에서 "뒤로가기"를 눌렀을 때 사이트 자체가 꺼지지 않고, 이
+  // 팝업을 열기 전 상태로만 돌아가게 하기 위한 히스토리 항목. 팝업이 열려
+  // 있는 동안 하나만 쌓아두고(다른 To Do 항목으로 바꿔 열어도 새로 쌓지
+  // 않음), 닫힐 때 그 항목을 제거해서 뒤로가기 한 번의 의미를 유지한다.
+  let todoModalHistoryPushed = false;
+
   function openTodoModal(sub) {
     const matchedCategory = todoMatchedCategory(sub.id);
     if (!matchedCategory) return;
@@ -1309,13 +1315,32 @@
     );
     renderTodoTable();
     todoModal.classList.remove('hidden');
+    if (!todoModalHistoryPushed) {
+      history.pushState({ todoModal: true }, '');
+      todoModalHistoryPushed = true;
+    }
     icons();
   }
 
   function closeTodoModal() {
+    if (todoModal.classList.contains('hidden')) return;
     todoModal.classList.add('hidden');
     currentTodoSub = null;
+    if (todoModalHistoryPushed) {
+      todoModalHistoryPushed = false;
+      history.back();
+    }
   }
+
+  window.addEventListener('popstate', () => {
+    // 뒤로가기로 여기 왔다는 건 팝업이 열려있었다는 뜻 — 실제 페이지 이동
+    // 없이 팝업만 닫는다.
+    if (!todoModal.classList.contains('hidden')) {
+      todoModal.classList.add('hidden');
+      currentTodoSub = null;
+      todoModalHistoryPushed = false;
+    }
+  });
 
   function renderTodoTable() {
     if (!currentTodoSub) return;
