@@ -231,7 +231,7 @@ input, textarea, select {
   padding: 9px 14px;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: var(--bg);
+  background: var(--surface);
   color: var(--text);
   font-size: 13px;
   font-weight: 600;
@@ -275,7 +275,7 @@ input, textarea, select {
 
 /* 카드 수정란의 카테고리/2차 카테고리 선택: 정렬 드롭다운과 같은
    커스텀 레이아웃을 쓰되, 필드 하나만큼 폭 전체를 차지한다. */
-.field .dropdown-btn { width: 100%; justify-content: space-between; font-weight: 400; }
+.field .dropdown-btn { width: 100%; justify-content: space-between; font-weight: 400; background: var(--bg); }
 
 /* ---------- 검색 ---------- */
 .search-bar {
