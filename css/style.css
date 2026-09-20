@@ -1285,9 +1285,6 @@ input, textarea, select {
     margin-bottom: 0;
   }
   .search-input-wrap { width: 100%; padding: 8px 12px; }
-  /* 글자 크기는 그대로 두고 버튼 자체만 원래의 0.9배 정도로 줄인다 */
-  #emptyAddBtn { padding: 8px 14px; gap: 5px; }
-  #emptyAddBtn svg { width: 14px; height: 14px; }
   .modal { padding: 20px; }
   .gallery-row { gap: 6px; }
   .gallery-row.multi { flex-wrap: wrap; align-items: flex-start; }
