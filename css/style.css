@@ -68,6 +68,15 @@ input, textarea, select {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  /* 카드가 많아져 #main이 뷰포트보다 길어지면 #app 그리드 행 높이도 그만큼
+     늘어나는데, 그리드 아이템은 기본적으로 행 높이만큼 늘어나(stretch)
+     사이드바도 같이 길어져서 하단의 아이디/로그아웃이 스크롤해야만 보이게
+     된다. sticky + 고정 높이로 사이드바 자체를 뷰포트 높이에 묶어두고,
+     내부 카테고리 목록(overflow-y: auto)만 넘치는 만큼 스스로 스크롤되게 한다. */
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  align-self: start;
 }
 
 .sidebar-header {

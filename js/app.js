@@ -1658,7 +1658,7 @@
     box.className = 'segment-box';
 
     const typeIcon = seg.type === 'text' ? 'type' : (seg.type === 'reference' ? 'chevrons-right' : 'image');
-    const typeLabel = seg.type === 'text' ? '텍스트' : (seg.type === 'reference' ? '레퍼런스 토글' : '이미지');
+    const typeLabel = seg.type === 'text' ? '텍스트' : (seg.type === 'reference' ? '갤러리 토글' : '이미지');
 
     const header = document.createElement('div');
     header.className = 'segment-box-header';
