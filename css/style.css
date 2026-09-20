@@ -89,8 +89,6 @@ input, textarea, select {
   text-align: left;
 }
 .sidebar-header:hover { background: var(--surface-alt); }
-.sidebar-header.active { background: var(--accent-soft); }
-.sidebar-header.active .brand-name { color: var(--accent-text); }
 
 .brand-icon { color: var(--accent); width: 20px; height: 20px; flex-shrink: 0; }
 .brand-name { font-weight: 700; font-size: 17px; letter-spacing: 0.2px; }

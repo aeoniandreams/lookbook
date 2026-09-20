@@ -622,8 +622,6 @@
 
   // ---------- 사이드바 ----------
   function renderSidebar() {
-    sidebarHomeBtn.classList.toggle('active', currentView === 'home');
-
     categoryNav.innerHTML = '';
     CATEGORIES.forEach(cat => {
       const count = allBlocks.filter(b => cat.subs.some(s => s.id === b.subcategoryId)).length;
