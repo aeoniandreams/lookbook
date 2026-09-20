@@ -15,7 +15,7 @@
   const $ = sel => document.querySelector(sel);
 
   const categoryNav = $('#categoryNav');
-  const homeNavBtn = $('#homeNavBtn');
+  const sidebarHomeBtn = $('#sidebarHomeBtn');
   const contentHeader = $('#contentHeader');
   const blockGrid = $('#blockGrid');
   const emptyState = $('#emptyState');
@@ -622,7 +622,7 @@
 
   // ---------- 사이드바 ----------
   function renderSidebar() {
-    homeNavBtn.classList.toggle('active', currentView === 'home');
+    sidebarHomeBtn.classList.toggle('active', currentView === 'home');
 
     categoryNav.innerHTML = '';
     CATEGORIES.forEach(cat => {
@@ -714,7 +714,7 @@
     icons();
   }
 
-  homeNavBtn.addEventListener('click', () => {
+  sidebarHomeBtn.addEventListener('click', () => {
     clearSearch();
     currentView = 'home';
     renderSidebar();

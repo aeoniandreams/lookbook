@@ -83,10 +83,16 @@ input, textarea, select {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 6px;
+  width: 100%;
+  padding: 10px 6px;
+  border-radius: var(--radius-sm);
+  text-align: left;
 }
+.sidebar-header:hover { background: var(--surface-alt); }
+.sidebar-header.active { background: var(--accent-soft); }
+.sidebar-header.active .brand-name { color: var(--accent-text); }
 
-.brand-icon { color: var(--accent); width: 20px; height: 20px; }
+.brand-icon { color: var(--accent); width: 20px; height: 20px; flex-shrink: 0; }
 .brand-name { font-weight: 700; font-size: 17px; letter-spacing: 0.2px; }
 
 #categoryNav {
@@ -1256,11 +1262,14 @@ input, textarea, select {
   #sidebar {
     position: fixed;
     top: 0; left: 0; bottom: 0;
-    /* 데스크탑용 height: 100vh를 그대로 물려받으면, 모바일 브라우저의
-       주소창만큼 100vh가 실제 화면보다 커져서 하단(아이디/로그아웃)이 다시
-       화면 밖으로 밀려난다. top/bottom을 0으로 고정해 그 사이 공간만큼만
-       차지하도록 height를 되돌린다. */
-    height: auto;
+    /* height: auto는 top/bottom만으로는 안정적으로 꽉 채워지지 않고 내용
+       높이만큼만 잡혀서(하단 아이디/로그아웃이 화면보다 짧게 남는 문제)
+       실패했다. 100vh는 반대로 모바일 브라우저 주소창 높이까지 포함해
+       실제 화면보다 커진다. 100dvh(동적 뷰포트 높이)는 주소창이 보이고
+       사라지는 것에 맞춰 실제 보이는 화면 높이를 따라가므로 이 문제를
+       정확히 해결한다. dvh 미지원 브라우저는 100vh로 대체 표시된다. */
+    height: 100vh;
+    height: 100dvh;
     width: 260px;
     transform: translateX(-100%);
     transition: transform 0.2s ease;
