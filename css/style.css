@@ -730,7 +730,7 @@ input, textarea, select {
 .view-text-block .rt-red { color: var(--danger); }
 .view-text-block .rt-h1 { font-size: 20px; font-weight: 700; }
 .view-text-block .rt-h2 { font-size: 17px; font-weight: 700; }
-.view-text-block .rt-h3 { font-size: 15px; font-weight: 600; }
+.view-text-block .rt-h3 { font-size: 15px; font-weight: 700; }
 .view-text-block img { max-width: 100%; border-radius: var(--radius-sm); display: block; margin: 8px 0; cursor: zoom-in; }
 .rt-icon {
   display: inline-flex;
@@ -1222,7 +1222,7 @@ input, textarea, select {
 .segment-editable .rt-red { color: var(--danger); }
 .segment-editable .rt-h1 { font-size: 20px; font-weight: 700; }
 .segment-editable .rt-h2 { font-size: 17px; font-weight: 700; }
-.segment-editable .rt-h3 { font-size: 15px; font-weight: 600; }
+.segment-editable .rt-h3 { font-size: 15px; font-weight: 700; }
 .segment-editable img { max-width: 100%; border-radius: var(--radius-sm); display: block; margin: 8px 0; }
 
 .segment-add-row { display: flex; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
