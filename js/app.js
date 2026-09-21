@@ -1788,6 +1788,10 @@
       <button type="button" class="rt-btn rt-italic" data-cmd="italic" title="기울임">I</button>
       <button type="button" class="rt-btn rt-strike" data-cmd="strikeThrough" title="취소선">S</button>
       <span class="rt-sep"></span>
+      <button type="button" class="rt-btn rt-heading" data-color="rt-h1" title="제목1">H1</button>
+      <button type="button" class="rt-btn rt-heading" data-color="rt-h2" title="제목2">H2</button>
+      <button type="button" class="rt-btn rt-heading" data-color="rt-h3" title="제목3">H3</button>
+      <span class="rt-sep"></span>
       <button type="button" class="rt-btn rt-swatch rt-swatch-gray" data-color="rt-gray" title="회색 글씨"></button>
       <button type="button" class="rt-btn rt-swatch rt-swatch-accent" data-color="rt-accent" title="포인트 색 글씨"></button>
       <button type="button" class="rt-btn rt-swatch rt-swatch-red" data-color="rt-red" title="빨간 글씨"></button>
@@ -1815,6 +1819,9 @@
       });
     });
 
+    // data-color는 색상 버튼뿐 아니라 제목1/2/3 버튼도 같이 쓴다 — 둘 다
+    // "선택 영역을 클래스 하나로 감싸고, 같은 클래스로 이미 감싸져 있으면
+    // 도로 벗긴다"는 동일한 토글 동작이라 굳이 따로 만들 필요가 없다.
     toolbar.querySelectorAll('[data-color]').forEach(btn => {
       btn.addEventListener('click', () => {
         editable.focus();

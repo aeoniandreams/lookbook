@@ -8,6 +8,7 @@
 
 :root {
   --bg: #ffffff;
+  --field-bg: #f6f4fc; /* 카드 수정창의 카테고리 드롭다운/박스 배경 전용 — 사이트 배경(--bg)과 분리 */
   --surface: #ffffff;
   --surface-alt: #ece8f9;
   --border: #ddd6f0;
@@ -276,7 +277,7 @@ input, textarea, select {
 
 /* 카드 수정란의 카테고리/2차 카테고리 선택: 정렬 드롭다운과 같은
    커스텀 레이아웃을 쓰되, 필드 하나만큼 폭 전체를 차지한다. */
-.field .dropdown-btn { width: 100%; justify-content: space-between; font-weight: 400; background: var(--bg); }
+.field .dropdown-btn { width: 100%; justify-content: space-between; font-weight: 400; background: var(--field-bg); }
 
 /* ---------- 검색 ---------- */
 .search-bar {
@@ -727,6 +728,9 @@ input, textarea, select {
 .view-text-block .rt-gray { color: var(--text-muted); }
 .view-text-block .rt-accent { color: var(--accent); }
 .view-text-block .rt-red { color: var(--danger); }
+.view-text-block .rt-h1 { font-size: 20px; font-weight: 700; }
+.view-text-block .rt-h2 { font-size: 17px; font-weight: 700; }
+.view-text-block .rt-h3 { font-size: 15px; font-weight: 600; }
 .view-text-block img { max-width: 100%; border-radius: var(--radius-sm); display: block; margin: 8px 0; cursor: zoom-in; }
 .rt-icon {
   display: inline-flex;
@@ -1071,7 +1075,7 @@ input, textarea, select {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 12px;
-  background: var(--bg);
+  background: var(--field-bg);
 }
 .segment-box-header {
   display: flex;
@@ -1121,7 +1125,7 @@ input, textarea, select {
   flex-wrap: wrap;
   gap: 4px;
   margin-bottom: 6px;
-  background: var(--bg);
+  background: var(--field-bg);
   padding: 2px 0;
 }
 /* CSS position:sticky만으로는, 박스 안에서 스크롤을 충분히 내리면 본문이
@@ -1151,6 +1155,7 @@ input, textarea, select {
 .rt-btn svg { width: 15px; height: 15px; }
 .rt-italic { font-style: italic; font-weight: 400; }
 .rt-strike { text-decoration: line-through; }
+.rt-heading { width: auto; padding: 0 6px; font-size: 11px; }
 .rt-sep {
   width: 1px;
   height: 18px;
@@ -1215,6 +1220,9 @@ input, textarea, select {
 .segment-editable .rt-gray { color: var(--text-muted); }
 .segment-editable .rt-accent { color: var(--accent); }
 .segment-editable .rt-red { color: var(--danger); }
+.segment-editable .rt-h1 { font-size: 20px; font-weight: 700; }
+.segment-editable .rt-h2 { font-size: 17px; font-weight: 700; }
+.segment-editable .rt-h3 { font-size: 15px; font-weight: 600; }
 .segment-editable img { max-width: 100%; border-radius: var(--radius-sm); display: block; margin: 8px 0; }
 
 .segment-add-row { display: flex; gap: 10px; margin-top: 4px; flex-wrap: wrap; }
