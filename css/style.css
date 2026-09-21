@@ -1241,6 +1241,24 @@ input, textarea, select {
   z-index: 200;
 }
 
+.scroll-top-btn {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow);
+  z-index: 70;
+}
+.scroll-top-btn:hover { opacity: 0.9; }
+.scroll-top-btn svg { width: 20px; height: 20px; }
+
 /* ---------- 모바일 ---------- */
 .mobile-only { display: none; }
 
@@ -1278,6 +1296,7 @@ input, textarea, select {
   }
   #sidebar.open { transform: translateX(0); }
   #main { padding: 70px 16px 50px; }
+  .scroll-top-btn { right: 16px; bottom: 16px; }
   .grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px; }
   /* 사이드바를 여는 햄버거 아이콘과 같은 줄에 오도록, 검색창을 그 오른쪽
      남는 자리에 고정한다. 자리가 좁아지는 만큼 검색창도 자연히 작아진다. */

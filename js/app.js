@@ -2084,6 +2084,16 @@
     sidebarScrim.classList.add('hidden');
   }
 
+  // ---------- 맨 위로 가기 버튼 ----------
+  const scrollTopBtn = $('#scrollTopBtn');
+  const SCROLL_TOP_SHOW_AT = 300;
+  window.addEventListener('scroll', () => {
+    scrollTopBtn.classList.toggle('hidden', window.scrollY < SCROLL_TOP_SHOW_AT);
+  }, { passive: true });
+  scrollTopBtn.addEventListener('click', () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+
   // 키보드로 모달 닫기
   document.addEventListener('keydown', (e) => {
     if (e.key !== 'Escape') return;
