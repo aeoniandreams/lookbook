@@ -570,6 +570,22 @@
     return null;
   }
 
+  // 전체 선택(Ctrl+A)처럼 선택 범위가 박스/컨테이너 단위로 잡히면
+  // range.commonAncestorContainer가 그 컨테이너 자신이 되어버려서(예: 제목
+  // span 하나가 박스의 유일한 자식일 때), closestColorSpan이 그 위로는
+  // 올라가지 않아 이미 적용된 span을 못 찾는다. 그 경우 선택 범위가 정확히
+  // "해당 클래스의 span 하나"만을 통째로 담고 있는지 별도로 확인한다.
+  function wholeSelectedSpan(range, className) {
+    if (range.startContainer !== range.endContainer) return null;
+    if (range.startContainer.nodeType !== Node.ELEMENT_NODE) return null;
+    const selected = [...range.startContainer.childNodes].slice(range.startOffset, range.endOffset);
+    if (selected.length === 1 && selected[0].nodeType === Node.ELEMENT_NODE &&
+        selected[0].tagName === 'SPAN' && selected[0].classList.contains(className)) {
+      return selected[0];
+    }
+    return null;
+  }
+
   function unwrapColorSpan(span, editable) {
     const sel = window.getSelection();
     const nodes = [...span.childNodes];
@@ -1829,7 +1845,8 @@
         if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return;
         const range = sel.getRangeAt(0);
         if (!editable.contains(range.commonAncestorContainer)) return;
-        const existingSpan = closestColorSpan(range.commonAncestorContainer, btn.dataset.color, editable);
+        const existingSpan = closestColorSpan(range.commonAncestorContainer, btn.dataset.color, editable)
+          || wholeSelectedSpan(range, btn.dataset.color);
         if (existingSpan) {
           unwrapColorSpan(existingSpan, editable);
         } else {
