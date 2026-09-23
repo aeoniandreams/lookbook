@@ -15,6 +15,7 @@
 
   const $ = sel => document.querySelector(sel);
 
+  const appRoot = $('#app');
   const categoryNav = $('#categoryNav');
   const sidebarHomeBtn = $('#sidebarHomeBtn');
   const contentHeader = $('#contentHeader');
@@ -1230,6 +1231,15 @@
   // 목록/로그인 화면은 전부 hidden 상태 그대로 두고, 이 모달 하나만 연다.
   function openGuestView(block) {
     isGuestMode = true;
+
+    // 뒤의 사이드바/홈 화면은 실제 데이터 없이(allBlocks가 비어있는 채로)
+    // 그냥 눈에 보이는 배경용으로만 띄운다 — 카드 목록 딤 오버레이가
+    // position:fixed로 화면 전체를 덮어서 클릭이 뒤로 전달되지 않으니
+    // (X 버튼/바깥 클릭 차단 로직과 별개로) 실제 조작은 애초에 안 된다.
+    appRoot.classList.remove('hidden');
+    renderSidebar();
+    renderMain();
+
     viewModal.dataset.blockId = block.id;
     renderViewModalContent(block);
     viewModal.classList.remove('hidden');
