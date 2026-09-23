@@ -22,6 +22,11 @@ import {
 const AUTH_EMAIL = window.FIREBASE_AUTH_EMAIL;
 const ADMIN_EMAIL = window.FIREBASE_ADMIN_EMAIL;
 const BLOCKS_COLLECTION = "blocks";
+// 카드 원본과 별도로, 제목/소속 카테고리/정렬용 년월만 담은 가벼운 사본.
+// 공유 링크의 배경을 장식할 때 "같은 1차 카테고리의 카드 제목들"만 필요하고
+// 본문/이미지는 전혀 필요 없어서, 누구나 읽을 수 있게 이 목록만 따로 열어둔다
+// (카드 원본 문서는 shared == true인 것 하나만 여전히 비로그인으로 읽힌다).
+const PREVIEWS_COLLECTION = "cardPreviews";
 
 // ---------- 비밀번호 입장 화면 DOM ----------
 const loadingView = document.getElementById("loadingView");
@@ -143,10 +148,25 @@ if (adminAuth) {
 // 카드 수정창에서 다른 내용을 저장할 때마다 그 필드가 같이 지워져버린다.
 async function saveBlock(block) {
   await setDoc(doc(adminDb, BLOCKS_COLLECTION, block.id), block, { merge: true });
+  // todoDone/shared 같은 부분 저장(title이 안 들어있음)일 땐 미리보기 사본을
+  // 건드리지 않는다 — title/subcategoryId가 undefined인 채로 덮어쓰면 안 되기 때문.
+  if (block.title !== undefined && block.subcategoryId !== undefined) {
+    await setDoc(
+      doc(adminDb, PREVIEWS_COLLECTION, block.id),
+      {
+        title: block.title,
+        subcategoryId: block.subcategoryId,
+        year: block.year ?? null,
+        month: block.month ?? null
+      },
+      { merge: false }
+    );
+  }
 }
 
 async function removeBlock(block) {
   await deleteDoc(doc(adminDb, BLOCKS_COLLECTION, block.id));
+  await deleteDoc(doc(adminDb, PREVIEWS_COLLECTION, block.id));
 }
 
 // ---------- 홈 화면 이미지 ----------
@@ -197,6 +217,23 @@ function afterMinLoading(fn) {
   setTimeout(fn, remaining);
 }
 
+// 카드가 실제로 보인 다음(=위에서 guest-ready를 이미 쏜 다음) 배경 장식용으로
+// 한 번만 가져온다. 카드 자체를 보여주는 것과는 별개라 실패해도 그냥 배경이
+// 비어있는 채로 두면 되고, 로딩 화면을 더 기다리게 하지 않는다.
+function loadGuestPreviews() {
+  const unsubPreviews = onSnapshot(
+    collection(db, PREVIEWS_COLLECTION),
+    (snapshot) => {
+      unsubPreviews();
+      const previews = snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+      window.dispatchEvent(new CustomEvent("guest-previews-ready", { detail: { previews } }));
+    },
+    (err) => {
+      console.error("[Lookbook] 공유 배경용 제목 목록 불러오기 실패:", err);
+    }
+  );
+}
+
 if (SHARED_CARD_ID) {
   // 공유 링크로 들어온 경우: 로그인 절차를 완전히 건너뛰고 그 카드 하나만
   // 비로그인으로 읽어본다. Firestore 규칙이 그 카드의 shared 필드를 보고
@@ -212,6 +249,7 @@ if (SHARED_CARD_ID) {
         loadingView.hidden = true;
         if (snap.exists() && snap.data().shared === true) {
           window.dispatchEvent(new CustomEvent("guest-ready", { detail: { block: { id: snap.id, ...snap.data() } } }));
+          loadGuestPreviews();
         } else {
           guestErrorView.classList.remove("hidden");
         }

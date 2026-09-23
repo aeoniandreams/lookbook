@@ -1232,10 +1232,18 @@
   function openGuestView(block) {
     isGuestMode = true;
 
-    // 뒤의 사이드바/홈 화면은 실제 데이터 없이(allBlocks가 비어있는 채로)
+    // 뒤의 사이드바/카테고리 화면은 실제 데이터 없이(allBlocks가 비어있는 채로)
     // 그냥 눈에 보이는 배경용으로만 띄운다 — 카드 목록 딤 오버레이가
     // position:fixed로 화면 전체를 덮어서 클릭이 뒤로 전달되지 않으니
     // (X 버튼/바깥 클릭 차단 로직과 별개로) 실제 조작은 애초에 안 된다.
+    // 공유 카드가 속한 1차 카테고리를 미리 선택해둬서, 배경이 "그 카테고리를
+    // 보고 있던 화면"처럼 보이게 한다 (제목 목록이 도착하면 그 카테고리의
+    // 최신 카드 제목들로 실제 채워진다 — guest-previews-ready 핸들러 참고).
+    const matchedCat = findCategoryBySub(block.subcategoryId);
+    if (matchedCat) {
+      selection = { categoryId: matchedCat.id, subcategoryId: null };
+      currentView = 'category';
+    }
     appRoot.classList.remove('hidden');
     renderSidebar();
     renderMain();
@@ -1243,6 +1251,47 @@
     viewModal.dataset.blockId = block.id;
     renderViewModalContent(block);
     viewModal.classList.remove('hidden');
+    icons();
+  }
+
+  // 실제로는 아무 기능도 없는 "모양만" 카드 — 클릭 핸들러도, 진짜 내용도
+  // 없다. 썸네일은 항상 빈 상태로 두고(진짜 카드 여부/이미지 유무가 배경에서
+  // 드러나지 않게) 제목만 얹는다.
+  function buildGuestFillerCardElement(preview) {
+    const card = document.createElement('article');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="card-thumb"><div class="thumb-empty"><i data-lucide="image"></i></div></div>
+      <div class="card-title">${escapeHTML(preview.title || '')}</div>
+    `;
+    return card;
+  }
+
+  const GUEST_FILLER_MAX = 12;
+
+  // 공유 카드와 같은 1차 카테고리의 제목만 골라 최신순으로 배경 그리드를
+  // 채운다. 화면이 넓을수록 grid의 auto-fill이 알아서 더 많은 열을 보여주니,
+  // 여기서는 화면 크기를 따로 재지 않고 넉넉한 개수만 준비해두면 된다.
+  function renderGuestFillerGrid(previews) {
+    if (!isGuestMode || currentView !== 'category') return;
+    const cat = currentCategory();
+    if (!cat) return;
+    const subIds = new Set(cat.subs.map(s => s.id));
+    const filtered = previews
+      .filter(p => subIds.has(p.subcategoryId))
+      .sort((a, b) => yearMonthValue(b) - yearMonthValue(a))
+      .slice(0, GUEST_FILLER_MAX);
+
+    blockGrid.innerHTML = '';
+    if (!filtered.length) {
+      emptyState.classList.remove('hidden');
+      blockGrid.classList.add('hidden');
+      icons();
+      return;
+    }
+    emptyState.classList.add('hidden');
+    blockGrid.classList.remove('hidden');
+    filtered.forEach(p => blockGrid.appendChild(buildGuestFillerCardElement(p)));
     icons();
   }
 
@@ -2201,10 +2250,15 @@
     });
   });
 
-  // 공유 링크(게스트)로 들어온 경우 — 로그인/사이드바/카드 목록 없이 이
-  // 카드 하나만 보여준다.
+  // 공유 링크(게스트)로 들어온 경우 — 로그인 없이 이 카드 하나만 보여준다.
+  // 뒤의 사이드바/그리드는 실제로 조작 불가능한 장식일 뿐이다.
   window.addEventListener('guest-ready', (e) => {
     icons();
     openGuestView(e.detail.block);
+  });
+
+  // 배경 장식용 제목 목록이 (카드보다 조금 늦게) 도착하면 그리드를 채운다.
+  window.addEventListener('guest-previews-ready', (e) => {
+    renderGuestFillerGrid(e.detail.previews);
   });
 })();
