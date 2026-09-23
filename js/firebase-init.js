@@ -26,10 +26,17 @@ const BLOCKS_COLLECTION = "blocks";
 // ---------- 비밀번호 입장 화면 DOM ----------
 const loadingView = document.getElementById("loadingView");
 const authGate = document.getElementById("authGate");
+const guestErrorView = document.getElementById("guestErrorView");
 const appRoot = document.getElementById("app");
 const passwordInput = document.getElementById("authPasswordInput");
 const authError = document.getElementById("authError");
 const submitBtn = document.getElementById("authSubmitBtn");
+
+// ---------- 공유 링크(게스트) ----------
+// ?card=<블록 id>로 들어온 경우, 로그인 없이 그 카드 하나만 딤+모달로 보여준다.
+// 이 카드는 Firestore 보안 규칙에서 shared == true일 때만 비로그인 읽기가
+// 허용되도록 따로 열어둬야 한다(콘솔에서 규칙 설정 필요).
+const SHARED_CARD_ID = new URLSearchParams(location.search).get("card");
 
 function showFatalError(message) {
   console.error("[Lookbook] " + message);
@@ -184,15 +191,49 @@ function showApp() {
 // 최소 1초는 로딩 화면이 보이도록 보장한다. 기준 시각(window.__pageLoadStart)은
 // index.html의 아무것도 기다리지 않는 스크립트에서 미리 재둔 값이다.
 const MIN_LOADING_MS = 1000;
-onAuthStateChanged(auth, (user) => {
+function afterMinLoading(fn) {
   const elapsed = Date.now() - (window.__pageLoadStart || Date.now());
   const remaining = Math.max(0, MIN_LOADING_MS - elapsed);
-  setTimeout(() => {
-    loadingView.hidden = true;
-    if (user) showApp();
-    else showGate();
-  }, remaining);
-});
+  setTimeout(fn, remaining);
+}
+
+if (SHARED_CARD_ID) {
+  // 공유 링크로 들어온 경우: 로그인 절차를 완전히 건너뛰고 그 카드 하나만
+  // 비로그인으로 읽어본다. Firestore 규칙이 그 카드의 shared 필드를 보고
+  // 허용/거부를 판단하므로, 여기서는 결과만 보고 화면을 나눈다.
+  // (getDoc은 이 저장소에 번들된 firebase-bundle.js가 내보내지 않아서,
+  // 문서 하나를 구독하는 onSnapshot으로 대신한다 — subscribeHomeImages와
+  // 같은 방식이며, 첫 응답만 받고 바로 구독을 끊는다.)
+  const unsubGuest = onSnapshot(
+    doc(db, BLOCKS_COLLECTION, SHARED_CARD_ID),
+    (snap) => {
+      unsubGuest();
+      afterMinLoading(() => {
+        loadingView.hidden = true;
+        if (snap.exists() && snap.data().shared === true) {
+          window.dispatchEvent(new CustomEvent("guest-ready", { detail: { block: { id: snap.id, ...snap.data() } } }));
+        } else {
+          guestErrorView.classList.remove("hidden");
+        }
+      });
+    },
+    (err) => {
+      console.error("[Lookbook] 공유 카드 불러오기 실패:", err);
+      afterMinLoading(() => {
+        loadingView.hidden = true;
+        guestErrorView.classList.remove("hidden");
+      });
+    }
+  );
+} else {
+  onAuthStateChanged(auth, (user) => {
+    afterMinLoading(() => {
+      loadingView.hidden = true;
+      if (user) showApp();
+      else showGate();
+    });
+  });
+}
 
 function describeAuthError(err) {
   const code = err && err.code;

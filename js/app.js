@@ -11,6 +11,7 @@
   let workingTodoImageIds = []; // To Do 표 일러스트 칸에 쓸, 갤러리 토글 안에서 고른 이미지. 최대 2개
   let todoNavOpen = false; // 사이드바의 "To Do" 카테고리 펼침 상태
   let currentTodoSub = null; // { sub, matchedCategory, selectedSubId } | null — 지금 열려있는 To Do 표
+  let isGuestMode = false; // 공유 링크(?card=)로 들어와 카드 하나만 보는 중인지
 
   const $ = sel => document.querySelector(sel);
 
@@ -1201,11 +1202,7 @@
     return `<div class="gallery-block">${galleryHTML}<p class="gallery-comment">${escapeHTML(comment)}</p></div>`;
   }
 
-  function openViewModal(blockId) {
-    const block = allBlocks.find(b => b.id === blockId);
-    if (!block) return;
-    viewModal.dataset.blockId = blockId;
-
+  function renderViewModalContent(block) {
     const segments = migrateBlockToSegments(block);
     viewSegments.innerHTML = segments.map(segmentViewHTML).join('');
 
@@ -1213,7 +1210,13 @@
     const cat = findCategoryBySub(block.subcategoryId);
     viewMeta.textContent = cat ? `${cat.name} · ${sub.name}` : '';
     viewTitle.textContent = block.title || '(제목 없음)';
+  }
 
+  function openViewModal(blockId) {
+    const block = allBlocks.find(b => b.id === blockId);
+    if (!block) return;
+    viewModal.dataset.blockId = blockId;
+    renderViewModalContent(block);
     viewModal.classList.remove('hidden');
     icons();
   }
@@ -1221,6 +1224,27 @@
   function closeViewModal() {
     viewModal.classList.add('hidden');
     viewModal.dataset.blockId = '';
+  }
+
+  // 공유 링크로 들어온 게스트에게 카드 하나만 보여준다. 사이드바/카드
+  // 목록/로그인 화면은 전부 hidden 상태 그대로 두고, 이 모달 하나만 연다.
+  function openGuestView(block) {
+    isGuestMode = true;
+    viewModal.dataset.blockId = block.id;
+    renderViewModalContent(block);
+    viewModal.classList.remove('hidden');
+    icons();
+  }
+
+  // X 버튼/Esc처럼 "닫으려는 시도"에서만 쓴다 — 게스트 모드면 실제로 닫는
+  // 대신 안내 문구만 띄운다. 바깥(딤 배경) 클릭은 그 시도로 치지 않고 그냥
+  // 아무 반응이 없어야 해서 closeViewModal을 직접 쓴다(아래 클릭 핸들러 참고).
+  function requestCloseViewModal() {
+    if (isGuestMode) {
+      toast('게스트는 해당 카드만 확인 가능해요.');
+      return;
+    }
+    closeViewModal();
   }
 
   let lightboxSourceItem = null;
@@ -1245,9 +1269,12 @@
   // 배경이든 이미지든 닫기 버튼이든, 라이트박스 안 어디를 눌러도 닫힌다.
   imageLightbox.addEventListener('click', closeImageLightbox);
 
-  $('[data-close-view]').addEventListener('click', closeViewModal);
+  $('[data-close-view]').addEventListener('click', requestCloseViewModal);
   viewModal.addEventListener('click', e => {
-    if (e.target === viewModal) { closeViewModal(); return; }
+    if (e.target === viewModal) {
+      if (!isGuestMode) closeViewModal();
+      return;
+    }
     const refItem = e.target.closest('.reference-item');
     if (refItem) {
       // 모바일(호버가 없는 화면)에서는 첫 탭으로 코멘트 오버레이만 보여주고,
@@ -1279,6 +1306,26 @@
     const id = viewModal.dataset.blockId;
     closeViewModal();
     openEditModal(id);
+  });
+
+  // 카드를 shared: true로 표시하고, 그 카드 하나만 가리키는 링크를
+  // 클립보드에 복사한다. 비밀번호 없이 그 링크로 들어오면(firebase-init.js의
+  // guest-ready) 이 카드 하나만 볼 수 있다.
+  $('#viewShareBtn').addEventListener('click', async () => {
+    const id = viewModal.dataset.blockId;
+    const block = allBlocks.find(b => b.id === id);
+    if (!block) return;
+    try {
+      if (!block.shared) {
+        await LookbookFirebase.saveBlock({ id: block.id, shared: true });
+      }
+      const url = `${location.origin}${location.pathname}?card=${encodeURIComponent(id)}`;
+      await navigator.clipboard.writeText(url);
+      toast('공유 링크를 복사했어요.');
+    } catch (err) {
+      console.error(err);
+      toast('공유 링크 복사에 실패했어요.');
+    }
   });
 
   $('#viewDeleteBtn').addEventListener('click', async () => {
@@ -2125,7 +2172,7 @@
     else if (!adminPasswordModal.classList.contains('hidden')) closeAdminPasswordModal();
     else if (!homeEditModal.classList.contains('hidden')) requestCloseHomeEditModal();
     else if (!editModal.classList.contains('hidden')) requestCloseEditModal();
-    else if (!viewModal.classList.contains('hidden')) closeViewModal();
+    else if (!viewModal.classList.contains('hidden')) requestCloseViewModal();
     else if (!todoModal.classList.contains('hidden')) closeTodoModal();
   });
 
@@ -2142,5 +2189,12 @@
       homeImages = items;
       if (currentView === 'home') renderHomeView();
     });
+  });
+
+  // 공유 링크(게스트)로 들어온 경우 — 로그인/사이드바/카드 목록 없이 이
+  // 카드 하나만 보여준다.
+  window.addEventListener('guest-ready', (e) => {
+    icons();
+    openGuestView(e.detail.block);
   });
 })();
