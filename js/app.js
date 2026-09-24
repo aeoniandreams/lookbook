@@ -12,6 +12,7 @@
   let todoNavOpen = false; // 사이드바의 "To Do" 카테고리 펼침 상태
   let currentTodoSub = null; // { sub, matchedCategory, selectedSubId } | null — 지금 열려있는 To Do 표
   let isGuestMode = false; // 공유 링크(?card=)로 들어와 카드 하나만 보는 중인지
+  let guestPreviews = []; // 게스트 모드에서만 채워짐 — 배경 카드 + 사이드바 숫자에 같이 쓴다
 
   const $ = sel => document.querySelector(sel);
 
@@ -644,10 +645,21 @@
   }
 
   // ---------- 사이드바 ----------
+  // 게스트 모드에선 allBlocks가 항상 비어있어서(카드 원본에 접근이 없으니),
+  // 배경 채우기용으로 이미 받아온 제목 목록(guestPreviews)에서 개수만 센다.
+  function categoryCount(cat) {
+    if (isGuestMode) return guestPreviews.filter(p => cat.subs.some(s => s.id === p.subcategoryId)).length;
+    return allBlocks.filter(b => cat.subs.some(s => s.id === b.subcategoryId)).length;
+  }
+  function subcategoryCount(subId) {
+    if (isGuestMode) return guestPreviews.filter(p => p.subcategoryId === subId).length;
+    return allBlocks.filter(b => b.subcategoryId === subId).length;
+  }
+
   function renderSidebar() {
     categoryNav.innerHTML = '';
     CATEGORIES.forEach(cat => {
-      const count = allBlocks.filter(b => cat.subs.some(s => s.id === b.subcategoryId)).length;
+      const count = categoryCount(cat);
       const isOpenCat = currentView === 'category' && selection.categoryId === cat.id;
 
       const catEl = document.createElement('div');
@@ -672,7 +684,7 @@
       const subList = document.createElement('div');
       subList.className = 'nav-sub-list';
       cat.subs.forEach(sub => {
-        const subCount = allBlocks.filter(b => b.subcategoryId === sub.id).length;
+        const subCount = subcategoryCount(sub.id);
         const subBtn = document.createElement('button');
         subBtn.className = 'nav-sub-item' + (isOpenCat && selection.subcategoryId === sub.id ? ' active' : '');
         subBtn.innerHTML = `<span>${sub.name}</span><span class="cat-count">${subCount}</span>`;
@@ -2269,8 +2281,11 @@
     openGuestView(e.detail.block);
   });
 
-  // 배경 장식용 제목 목록이 (카드보다 조금 늦게) 도착하면 그리드를 채운다.
+  // 배경 장식용 제목 목록이 (카드보다 조금 늦게) 도착하면 그리드를 채우고,
+  // 같은 목록으로 사이드바 숫자도 실제 값으로 다시 그린다.
   window.addEventListener('guest-previews-ready', (e) => {
-    renderGuestFillerGrid(e.detail.previews);
+    guestPreviews = e.detail.previews;
+    renderGuestFillerGrid(guestPreviews);
+    renderSidebar();
   });
 })();
