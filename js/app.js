@@ -266,6 +266,10 @@
   // firebase-init.js가 이 이벤트를 이미 쏜 뒤에 이 코드가 실행됐을 수도
   // 있으니, 구독을 걸자마자 마지막으로 알려진 상태로 한 번 맞춰준다.
   window.addEventListener('admin-auth-changed', (e) => {
+    // 공유 링크(게스트)는 그 기기에 남아있는 관리자 세션과 완전히 무관해야
+    // 한다 — 관리자 본인이 자기 휴대폰으로 공유 링크를 열어봐도, 뒤 배경과
+    // 카드에 수정/공유/삭제 버튼이 보이면 안 된다.
+    if (isGuestMode) return;
     isAdmin = !!(e.detail && e.detail.isAdmin);
     applyAdminUI();
     renderSidebar(); // "To Do" 카테고리는 관리자 모드에서만 보여서, 전환될 때마다 다시 그려야 한다
@@ -1231,6 +1235,14 @@
   // 목록/로그인 화면은 전부 hidden 상태 그대로 두고, 이 모달 하나만 연다.
   function openGuestView(block) {
     isGuestMode = true;
+
+    // 이 기기에 관리자 세션이 남아있더라도(예: 관리자 본인이 자기 휴대폰으로
+    // 공유 링크를 열어보는 경우) 게스트 화면에서는 무조건 일반 유저처럼
+    // 보이게 강제한다 — 수정/공유/삭제 버튼, "+" 버튼, 사이드바 아이디/관리자
+    // 모드 문구가 전혀 보이면 안 된다. 로그아웃 아이콘만 그대로 둔다.
+    isAdmin = false;
+    applyAdminUI();
+    sidebarUsernameBtn.classList.add('hidden');
 
     // 뒤의 사이드바/카테고리 화면은 실제 데이터 없이(allBlocks가 비어있는 채로)
     // 그냥 눈에 보이는 배경용으로만 띄운다 — 카드 목록 딤 오버레이가
