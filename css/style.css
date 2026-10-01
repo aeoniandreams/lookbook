@@ -502,8 +502,10 @@ input, textarea, select {
 .loading-image[hidden] { display: none; }
 .loading-dots-text {
   margin: 0;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
+  letter-spacing: 3px;
+  text-transform: uppercase;
   color: var(--text);
 }
 /* 점 개수(0~3개)가 바뀌어도 "Loading" 글자 위치가 옆으로 흔들리지 않도록
@@ -522,7 +524,7 @@ input, textarea, select {
 @media (min-width: 768px) {
   .loading-content { gap: 18px; }
   .loading-image { max-width: 260px; max-height: 260px; }
-  .loading-dots-text { font-size: 18px; }
+  .loading-dots-text { font-size: 16px; }
   .loading-dots { min-width: 22px; }
   .loading-comment { font-size: 13px; }
 }
