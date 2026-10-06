@@ -1433,15 +1433,13 @@
     // 카드 맨 아래 문구. 날짜(년도)를 입력하지 않은 카드에는 아무것도 붙지 않는다.
     // 공유 링크(게스트)에서는 날짜/디자인 줄을 빼고 저작권 줄만 간단히 보여준다.
     const dateText = formatDate(block);
-    const rowParts = [];
-    if (cat && cat.work) {
-      rowParts.push(`<span>본 디자인은 ${escapeHTML(cat.work)}${eulReul(cat.work)} 기반으로 한 2차 창작물입니다.</span>`);
-    }
-    if (dateText && !isGuestMode) rowParts.push(`<span>${escapeHTML(dateText)} 디자인</span>`);
+    const notice = cat && cat.work
+      ? `본 디자인${dateText && !isGuestMode ? `(${dateText})` : ''}은 ${cat.work}${eulReul(cat.work)} 기반으로 한 2차 창작물입니다.`
+      : '';
     const yearText = block.year ? `${block.year} ` : '';
     const owner = isGuestMode ? '明' : '明(@ae0niandreams)';
     viewDate.innerHTML =
-      (rowParts.length ? `<div class="view-date-row">${rowParts.join('')}</div>` : '') +
+      (notice ? `<div>${escapeHTML(notice)}</div>` : '') +
       `<div>${escapeHTML(`© ${yearText}${owner}. All rights reserved.`)}</div>`;
     viewDate.classList.remove('hidden');
   }

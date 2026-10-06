@@ -760,12 +760,6 @@ body.is-reordering { -webkit-user-select: none; user-select: none; }
   margin-bottom: 0;
   text-align: left;
 }
-.view-date-row {
-  display: flex;
-  flex-wrap: wrap;
-  column-gap: 14px;
-  row-gap: 2px;
-}
 .view-segments {
   display: flex;
   flex-direction: column;
