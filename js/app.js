@@ -1422,9 +1422,18 @@
     const cat = findCategoryBySub(block.subcategoryId);
     viewMeta.textContent = cat ? `${cat.name} · ${sub.name}` : '';
     viewTitle.textContent = block.title || '(제목 없음)';
+    // 카드 맨 아래 문구. 날짜(년도)를 입력하지 않은 카드에는 아무것도 붙지 않는다.
+    // 공유 링크(게스트)에서는 날짜/디자인 줄을 빼고 저작권 줄만 간단히 보여준다.
     const dateText = formatDate(block);
-    viewDate.textContent = dateText ? `디자인 ${dateText}` : '';
-    viewDate.classList.toggle('hidden', !dateText);
+    const lines = [];
+    if (dateText) {
+      if (!isGuestMode) lines.push(`${dateText} 디자인`);
+      lines.push(isGuestMode
+        ? `© ${block.year} 明. All rights reserved.`
+        : `© ${block.year} 明(@ae0niandreams). All rights reserved.`);
+    }
+    viewDate.innerHTML = lines.map(l => `<div>${escapeHTML(l)}</div>`).join('');
+    viewDate.classList.toggle('hidden', !lines.length);
   }
 
   function openViewModal(blockId) {
