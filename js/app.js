@@ -896,17 +896,19 @@
   }
 
   // ---------- 카드 드래그로 순서 바꾸기 ----------
-  // 관리자가 2차 카테고리를 보고 있고 정렬이 기본순일 때만 켜진다. 마우스는
-  // 조금 끌면 바로, 터치는 스크롤과 구분하려고 길게 누른 뒤에 끌기가 시작된다.
+  // 관리자가 2차 카테고리를 보고 있고 정렬이 기본순일 때만 켜진다. 마우스로만
+  // 되고, 모바일(좁은 화면/터치 기기)에서는 일부러 막아두었다.
   const REORDER_MOVE_PX = 6;
-  const REORDER_LONG_PRESS_MS = 380;
+  const MOBILE_QUERY = window.matchMedia('(max-width: 760px), (pointer: coarse)');
   let reorderDrag = null;
   let suppressCardClick = false;
 
   function isReorderEnabled() {
     return isAdmin && !isGuestMode && !isSearching() && currentView === 'category'
-      && !!selection.subcategoryId && sortOrder === 'manual';
+      && !!selection.subcategoryId && sortOrder === 'manual' && !MOBILE_QUERY.matches;
   }
+
+  MOBILE_QUERY.addEventListener('change', () => updateReorderUI());
 
   function updateReorderUI() {
     const enabled = isReorderEnabled() && !blockGrid.classList.contains('hidden');
@@ -985,7 +987,6 @@
     const d = reorderDrag;
     reorderDrag = null;
     if (!d) return;
-    clearTimeout(d.timer);
     if (d.raf) cancelAnimationFrame(d.raf);
     d.cleanup();
     if (!d.active) return;
@@ -1042,60 +1043,12 @@
     document.addEventListener('mouseup', onUp);
   });
 
-  // 터치: 카드가 끌려 DOM에서 자리를 옮기면 문서 쪽으로 이벤트가 올라가지
-  // 않으니, 이벤트는 카드 요소 자신에게 직접 건다.
-  blockGrid.addEventListener('touchstart', (e) => {
-    if (reorderDrag || e.touches.length !== 1 || !isReorderEnabled()) return;
-    const card = e.target.closest('.card');
-    if (!card) return;
-    const t = e.touches[0];
-    const onMove = (ev) => {
-      if (!reorderDrag) return;
-      const p = ev.touches[0];
-      reorderDrag.lastX = p.clientX;
-      reorderDrag.lastY = p.clientY;
-      if (!reorderDrag.active) {
-        // 길게 누르기 전에 손가락이 움직였다면 스크롤하려는 것 — 끌기를 취소한다.
-        if (Math.hypot(p.clientX - reorderDrag.startX, p.clientY - reorderDrag.startY) > 10) endReorderDrag(false);
-        return;
-      }
-      ev.preventDefault();
-      moveReorderDrag(p.clientX, p.clientY);
-    };
-    const onEnd = (ev) => {
-      if (reorderDrag && reorderDrag.active && ev.cancelable) ev.preventDefault();
-      endReorderDrag(ev.type === 'touchend');
-    };
-    reorderDrag = {
-      card, startX: t.clientX, startY: t.clientY, lastX: t.clientX, lastY: t.clientY, active: false,
-      cleanup() {
-        card.removeEventListener('touchmove', onMove);
-        card.removeEventListener('touchend', onEnd);
-        card.removeEventListener('touchcancel', onEnd);
-      }
-    };
-    reorderDrag.timer = setTimeout(() => {
-      if (reorderDrag && !reorderDrag.active) {
-        beginReorderDrag(reorderDrag.lastX, reorderDrag.lastY);
-        if (navigator.vibrate) navigator.vibrate(15);
-      }
-    }, REORDER_LONG_PRESS_MS);
-    card.addEventListener('touchmove', onMove, { passive: false });
-    card.addEventListener('touchend', onEnd);
-    card.addEventListener('touchcancel', onEnd);
-  }, { passive: true });
-
   // 끌기를 끝낸 직후에 따라오는 click이 카드를 열어버리지 않게 막는다.
   blockGrid.addEventListener('click', (e) => {
     if (!suppressCardClick) return;
     e.stopPropagation();
     e.preventDefault();
   }, true);
-
-  // 길게 누를 때 뜨는 모바일 기본 메뉴(이미지 저장 등)가 끌기를 방해하지 않게 한다.
-  blockGrid.addEventListener('contextmenu', (e) => {
-    if (blockGrid.classList.contains('reorderable')) e.preventDefault();
-  });
 
   // ---------- 검색 ----------
   function isSearching() {
