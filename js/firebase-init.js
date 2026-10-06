@@ -146,22 +146,36 @@ if (adminAuth) {
 // merge: true로 저장한다 — To Do 표의 체크박스(todoDone)처럼 카드 수정창이
 // 다루지 않는 필드도 따로 저장될 수 있는데, merge 없이 통째로 덮어쓰면
 // 카드 수정창에서 다른 내용을 저장할 때마다 그 필드가 같이 지워져버린다.
+function buildPreview(block) {
+  return {
+    title: block.title,
+    subcategoryId: block.subcategoryId,
+    year: block.year ?? null,
+    month: block.month ?? null,
+    day: block.day ?? null,
+    order: typeof block.order === "number" ? block.order : null
+  };
+}
+
 async function saveBlock(block) {
   await setDoc(doc(adminDb, BLOCKS_COLLECTION, block.id), block, { merge: true });
   // todoDone/shared 같은 부분 저장(title이 안 들어있음)일 땐 미리보기 사본을
   // 건드리지 않는다 — title/subcategoryId가 undefined인 채로 덮어쓰면 안 되기 때문.
   if (block.title !== undefined && block.subcategoryId !== undefined) {
-    await setDoc(
-      doc(adminDb, PREVIEWS_COLLECTION, block.id),
-      {
-        title: block.title,
-        subcategoryId: block.subcategoryId,
-        year: block.year ?? null,
-        month: block.month ?? null
-      },
-      { merge: false }
-    );
+    await setDoc(doc(adminDb, PREVIEWS_COLLECTION, block.id), buildPreview(block), { merge: false });
   }
+}
+
+// 드래그로 순서를 바꿨을 때, 순서가 바뀐 카드들의 order만 본 문서에 합쳐 쓰고
+// (나머지 필드는 건드리지 않는다) 미리보기 사본도 새 순서로 다시 쓴다. 넘겨받는
+// 카드는 앱이 이미 들고 있는 전체 카드라 title/subcategoryId가 항상 들어있다.
+async function saveBlockOrders(blocks) {
+  await Promise.all(
+    blocks.flatMap((block) => [
+      setDoc(doc(adminDb, BLOCKS_COLLECTION, block.id), { order: block.order }, { merge: true }),
+      setDoc(doc(adminDb, PREVIEWS_COLLECTION, block.id), buildPreview(block), { merge: false })
+    ])
+  );
 }
 
 async function removeBlock(block) {
@@ -187,6 +201,7 @@ window.LookbookFirebase = {
   logout,
   subscribeBlocks,
   saveBlock,
+  saveBlockOrders,
   removeBlock,
   subscribeHomeImages,
   saveHomeImages,

@@ -36,7 +36,9 @@
   const sortDropdownBtn = $('#sortDropdownBtn');
   const sortDropdownLabel = $('#sortDropdownLabel');
   const sortDropdownMenu = $('#sortDropdownMenu');
-  let sortOrder = 'oldest';
+  // 'manual' = 관리자가 드래그로 정한 순서(기본순), 'design' = 날짜 최신순(디자인순)
+  let sortOrder = 'manual';
+  const reorderHint = $('#reorderHint');
 
   const viewModal = $('#viewModal');
   const viewSegments = $('#viewSegments');
@@ -273,6 +275,7 @@
     if (isGuestMode) return;
     isAdmin = !!(e.detail && e.detail.isAdmin);
     applyAdminUI();
+    updateReorderUI();
     renderSidebar(); // "To Do" 카테고리는 관리자 모드에서만 보여서, 전환될 때마다 다시 그려야 한다
   });
   syncAdminUIFromGlobal();
@@ -760,46 +763,74 @@
     return CATEGORIES.find(c => c.id === selection.categoryId);
   }
 
-  // 카드 수정창에서 입력한 년/월을 정렬용 숫자 하나로 합친다. 비워둔 카드는
-  // 0(=가장 오래됨)으로 취급해서, 최신순이면 맨 뒤로 오래된순이면 맨 앞으로 간다.
-  function yearMonthValue(block) {
+  // 카드 수정창에서 입력한 날짜(년/월/일)를 정렬용 숫자 하나로 합친다. 비워둔
+  // 카드는 0(=가장 오래됨)으로 취급해서, 최신순이면 맨 뒤로 가고 오래된순이면
+  // 맨 앞으로 간다.
+  function dateSortValue(block) {
     if (!block.year) return 0;
-    return block.year * 12 + (block.month || 0);
+    return block.year * 10000 + (block.month || 0) * 100 + (block.day || 0);
   }
 
-  // "년월" 입력칸: "2026.03." / "2026.3" / "2026" 같은 표기를 년/월로 해석한다.
-  function parseYearMonth(str) {
+  // 날짜 입력칸: "2026.03.15." 형식. 예전에 년/월만 넣어둔 카드도 그대로 열 수
+  // 있게 "2026.03." / "2026.3" / "2026"처럼 뒤쪽이 빠진 표기도 해석한다.
+  function parseDate(str) {
+    const empty = { year: null, month: null, day: null };
     const trimmed = (str || '').trim();
-    if (!trimmed) return { year: null, month: null };
-    const m = /^(\d{4})(?:\.(\d{1,2}))?\.?$/.exec(trimmed);
-    if (!m) return { year: null, month: null };
+    if (!trimmed) return empty;
+    const m = /^(\d{4})(?:\.(\d{1,2})(?:\.(\d{1,2}))?)?\.?$/.exec(trimmed);
+    if (!m) return empty;
     const year = parseInt(m[1], 10);
     const month = m[2] ? parseInt(m[2], 10) : null;
-    return { year, month: (month >= 1 && month <= 12) ? month : null };
+    const validMonth = month >= 1 && month <= 12 ? month : null;
+    const day = m[3] ? parseInt(m[3], 10) : null;
+    const validDay = validMonth && day >= 1 && day <= 31 ? day : null;
+    return { year, month: validMonth, day: validDay };
   }
 
-  function formatYearMonth(block) {
+  function formatDate(block) {
     if (!block || !block.year) return '';
-    return block.month ? `${block.year}.${String(block.month).padStart(2, '0')}.` : `${block.year}.`;
+    const mm = block.month ? String(block.month).padStart(2, '0') : null;
+    const dd = block.month && block.day ? String(block.day).padStart(2, '0') : null;
+    if (mm && dd) return `${block.year}.${mm}.${dd}.`;
+    return mm ? `${block.year}.${mm}.` : `${block.year}.`;
+  }
+
+  // 한 2차 카테고리 안의 순서(기본순). 드래그로 순서를 정한 카드(order)는 그
+  // 번호대로, 아직 한 번도 순서를 정하지 않은 예전 카드는 날짜 오래된 순으로
+  // 앞에 둔다 — 순서를 처음 건드리기 전까지 예전 화면 그대로 보이게 하고,
+  // 새로 추가한 카드(order가 맨 뒤 번호)는 항상 맨 끝에 붙게 하려는 것.
+  function subOrderedItems(items, subId) {
+    const list = items.filter(b => b.subcategoryId === subId);
+    const unordered = list
+      .filter(b => typeof b.order !== 'number')
+      .sort((a, b) => dateSortValue(a) - dateSortValue(b));
+    const ordered = list
+      .filter(b => typeof b.order === 'number')
+      .sort((a, b) => a.order - b.order);
+    return unordered.concat(ordered);
+  }
+
+  // 1차 카테고리 전체는 위에 있는 2차 카테고리가 우선이고, 각 2차 카테고리
+  // 안에서는 그 카테고리의 기본순을 그대로 따른다.
+  function defaultOrderedItems(items, cat, subId) {
+    const subs = subId ? cat.subs.filter(s => s.id === subId) : cat.subs;
+    return subs.flatMap(s => subOrderedItems(items, s.id));
+  }
+
+  function nextOrderInSub(subId) {
+    const orders = allBlocks
+      .filter(b => b.subcategoryId === subId && typeof b.order === 'number')
+      .map(b => b.order);
+    return orders.length ? Math.max(...orders) + 1 : 0;
   }
 
   function visibleBlocks() {
     const cat = currentCategory();
     if (!cat) return [];
-    let blocks;
-    if (selection.subcategoryId) {
-      blocks = allBlocks.filter(b => b.subcategoryId === selection.subcategoryId);
-    } else {
-      const subIds = cat.subs.map(s => s.id);
-      blocks = allBlocks.filter(b => subIds.includes(b.subcategoryId));
-    }
-    const sorted = blocks.slice();
-    if (sortOrder === 'newest') {
-      sorted.sort((a, b) => yearMonthValue(b) - yearMonthValue(a));
-    } else {
-      sorted.sort((a, b) => yearMonthValue(a) - yearMonthValue(b));
-    }
-    return sorted;
+    const list = defaultOrderedItems(allBlocks, cat, selection.subcategoryId);
+    // 디자인순은 날짜 최신순. 같은 날짜(또는 날짜 없음)끼리는 위 기본순이 유지된다.
+    if (sortOrder === 'design') list.sort((a, b) => dateSortValue(b) - dateSortValue(a));
+    return list;
   }
 
   function renderBreadcrumb() {
@@ -831,6 +862,7 @@
     const thumbCount = (block.thumbnailIds && block.thumbnailIds.length) || (allImages(block).length ? 1 : 0);
     const card = document.createElement('article');
     card.className = 'card';
+    card.dataset.blockId = block.id;
     card.innerHTML = `
       <div class="card-thumb thumb-count-${thumbCount}">
         ${thumbnailHTML(block)}
@@ -842,12 +874,16 @@
   }
 
   function renderGrid() {
+    // 카드를 끌고 있는 도중에 새 데이터가 들어와 그리드를 다시 그리면, 끌던
+    // 카드가 화면에서 사라져버린다 — 끝난 뒤에 다시 그린다.
+    if (reorderDrag && reorderDrag.active) return;
     const blocks = visibleBlocks();
     blockGrid.innerHTML = '';
 
     if (!blocks.length) {
       emptyState.classList.remove('hidden');
       blockGrid.classList.add('hidden');
+      updateReorderUI();
       icons();
       return;
     }
@@ -855,8 +891,211 @@
     blockGrid.classList.remove('hidden');
 
     blocks.forEach(block => blockGrid.appendChild(buildCardElement(block)));
+    updateReorderUI();
     icons();
   }
+
+  // ---------- 카드 드래그로 순서 바꾸기 ----------
+  // 관리자가 2차 카테고리를 보고 있고 정렬이 기본순일 때만 켜진다. 마우스는
+  // 조금 끌면 바로, 터치는 스크롤과 구분하려고 길게 누른 뒤에 끌기가 시작된다.
+  const REORDER_MOVE_PX = 6;
+  const REORDER_LONG_PRESS_MS = 380;
+  let reorderDrag = null;
+  let suppressCardClick = false;
+
+  function isReorderEnabled() {
+    return isAdmin && !isGuestMode && !isSearching() && currentView === 'category'
+      && !!selection.subcategoryId && sortOrder === 'manual';
+  }
+
+  function updateReorderUI() {
+    const enabled = isReorderEnabled() && !blockGrid.classList.contains('hidden');
+    blockGrid.classList.toggle('reorderable', enabled);
+    reorderHint.classList.toggle('hidden', !enabled);
+  }
+
+  function moveReorderGhost(x, y) {
+    reorderDrag.ghost.style.transform =
+      `translate(${x - reorderDrag.offsetX}px, ${y - reorderDrag.offsetY}px) scale(1.03)`;
+  }
+
+  function beginReorderDrag(x, y) {
+    const d = reorderDrag;
+    d.active = true;
+    const rect = d.card.getBoundingClientRect();
+    d.offsetX = x - rect.left;
+    d.offsetY = y - rect.top;
+    d.lastX = x;
+    d.lastY = y;
+    const ghost = d.card.cloneNode(true);
+    ghost.classList.add('drag-ghost');
+    ghost.style.width = rect.width + 'px';
+    ghost.style.height = rect.height + 'px';
+    document.body.appendChild(ghost);
+    d.ghost = ghost;
+    d.card.classList.add('drag-placeholder');
+    document.body.classList.add('is-reordering');
+    suppressCardClick = true;
+    moveReorderGhost(x, y);
+
+    const step = () => {
+      if (!reorderDrag || !reorderDrag.active) return;
+      const edge = 70;
+      const vh = window.innerHeight;
+      let dy = 0;
+      if (reorderDrag.lastY < edge) dy = -Math.ceil((edge - reorderDrag.lastY) / 5);
+      else if (reorderDrag.lastY > vh - edge) dy = Math.ceil((reorderDrag.lastY - (vh - edge)) / 5);
+      if (dy) {
+        window.scrollBy(0, dy);
+        reorderAt(reorderDrag.lastX, reorderDrag.lastY);
+      }
+      reorderDrag.raf = requestAnimationFrame(step);
+    };
+    d.raf = requestAnimationFrame(step);
+  }
+
+  // 포인터 아래에 있는 다른 카드의 왼쪽 절반이면 그 앞으로, 오른쪽 절반이면
+  // 그 뒤로 끌던 카드를 옮긴다(실제 DOM 위치가 바뀌므로 나머지 카드가 밀려난다).
+  function reorderAt(x, y) {
+    const d = reorderDrag;
+    const el = document.elementFromPoint(x, y);
+    const target = el && el.closest('#blockGrid .card');
+    if (target && target !== d.card) {
+      const r = target.getBoundingClientRect();
+      if (x < r.left + r.width / 2) blockGrid.insertBefore(d.card, target);
+      else blockGrid.insertBefore(d.card, target.nextSibling);
+      return;
+    }
+    if (target) return;
+    const cards = blockGrid.querySelectorAll('.card');
+    const first = cards[0];
+    const last = cards[cards.length - 1];
+    if (last && last !== d.card && y > last.getBoundingClientRect().bottom) blockGrid.appendChild(d.card);
+    else if (first && first !== d.card && y < first.getBoundingClientRect().top) blockGrid.insertBefore(d.card, first);
+  }
+
+  function moveReorderDrag(x, y) {
+    reorderDrag.lastX = x;
+    reorderDrag.lastY = y;
+    moveReorderGhost(x, y);
+    reorderAt(x, y);
+  }
+
+  function endReorderDrag(commit) {
+    const d = reorderDrag;
+    reorderDrag = null;
+    if (!d) return;
+    clearTimeout(d.timer);
+    if (d.raf) cancelAnimationFrame(d.raf);
+    d.cleanup();
+    if (!d.active) return;
+    d.ghost.remove();
+    d.card.classList.remove('drag-placeholder');
+    document.body.classList.remove('is-reordering');
+    setTimeout(() => { suppressCardClick = false; }, 60);
+    if (commit) commitReorder();
+    else renderGrid();
+  }
+
+  function commitReorder() {
+    const byId = new Map(allBlocks.map(b => [b.id, b]));
+    const changed = [];
+    [...blockGrid.querySelectorAll('.card')].forEach((card, index) => {
+      const block = byId.get(card.dataset.blockId);
+      if (block && block.order !== index) {
+        block.order = index;
+        changed.push(block);
+      }
+    });
+    if (!changed.length) return;
+    LookbookFirebase.saveBlockOrders(changed)
+      .then(() => toast('순서를 저장했어요.'))
+      .catch(err => {
+        console.error(err);
+        toast('순서 저장에 실패했어요. 네트워크를 확인해주세요.');
+      });
+  }
+
+  blockGrid.addEventListener('mousedown', (e) => {
+    if (e.button !== 0 || reorderDrag || !isReorderEnabled()) return;
+    const card = e.target.closest('.card');
+    if (!card) return;
+    // 이미지 기본 드래그/글자 선택이 먼저 시작되지 않게 막는다(클릭은 그대로 동작).
+    e.preventDefault();
+    const onMove = (ev) => {
+      if (!reorderDrag) return;
+      if (!reorderDrag.active) {
+        if (Math.hypot(ev.clientX - reorderDrag.startX, ev.clientY - reorderDrag.startY) < REORDER_MOVE_PX) return;
+        beginReorderDrag(ev.clientX, ev.clientY);
+      }
+      moveReorderDrag(ev.clientX, ev.clientY);
+    };
+    const onUp = () => endReorderDrag(true);
+    reorderDrag = {
+      card, startX: e.clientX, startY: e.clientY, active: false,
+      cleanup() {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+      }
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  });
+
+  // 터치: 카드가 끌려 DOM에서 자리를 옮기면 문서 쪽으로 이벤트가 올라가지
+  // 않으니, 이벤트는 카드 요소 자신에게 직접 건다.
+  blockGrid.addEventListener('touchstart', (e) => {
+    if (reorderDrag || e.touches.length !== 1 || !isReorderEnabled()) return;
+    const card = e.target.closest('.card');
+    if (!card) return;
+    const t = e.touches[0];
+    const onMove = (ev) => {
+      if (!reorderDrag) return;
+      const p = ev.touches[0];
+      reorderDrag.lastX = p.clientX;
+      reorderDrag.lastY = p.clientY;
+      if (!reorderDrag.active) {
+        // 길게 누르기 전에 손가락이 움직였다면 스크롤하려는 것 — 끌기를 취소한다.
+        if (Math.hypot(p.clientX - reorderDrag.startX, p.clientY - reorderDrag.startY) > 10) endReorderDrag(false);
+        return;
+      }
+      ev.preventDefault();
+      moveReorderDrag(p.clientX, p.clientY);
+    };
+    const onEnd = (ev) => {
+      if (reorderDrag && reorderDrag.active && ev.cancelable) ev.preventDefault();
+      endReorderDrag(ev.type === 'touchend');
+    };
+    reorderDrag = {
+      card, startX: t.clientX, startY: t.clientY, lastX: t.clientX, lastY: t.clientY, active: false,
+      cleanup() {
+        card.removeEventListener('touchmove', onMove);
+        card.removeEventListener('touchend', onEnd);
+        card.removeEventListener('touchcancel', onEnd);
+      }
+    };
+    reorderDrag.timer = setTimeout(() => {
+      if (reorderDrag && !reorderDrag.active) {
+        beginReorderDrag(reorderDrag.lastX, reorderDrag.lastY);
+        if (navigator.vibrate) navigator.vibrate(15);
+      }
+    }, REORDER_LONG_PRESS_MS);
+    card.addEventListener('touchmove', onMove, { passive: false });
+    card.addEventListener('touchend', onEnd);
+    card.addEventListener('touchcancel', onEnd);
+  }, { passive: true });
+
+  // 끌기를 끝낸 직후에 따라오는 click이 카드를 열어버리지 않게 막는다.
+  blockGrid.addEventListener('click', (e) => {
+    if (!suppressCardClick) return;
+    e.stopPropagation();
+    e.preventDefault();
+  }, true);
+
+  // 길게 누를 때 뜨는 모바일 기본 메뉴(이미지 저장 등)가 끌기를 방해하지 않게 한다.
+  blockGrid.addEventListener('contextmenu', (e) => {
+    if (blockGrid.classList.contains('reorderable')) e.preventDefault();
+  });
 
   // ---------- 검색 ----------
   function isSearching() {
@@ -936,6 +1175,7 @@
       emptyState.classList.add('hidden');
       homeView.classList.add('hidden');
       searchResultsView.classList.remove('hidden');
+      updateReorderUI();
       renderSearchResults();
       return;
     }
@@ -946,6 +1186,7 @@
       blockGrid.classList.add('hidden');
       emptyState.classList.add('hidden');
       homeView.classList.remove('hidden');
+      updateReorderUI();
       renderHomeView();
     } else {
       homeView.classList.add('hidden');
@@ -1293,18 +1534,15 @@
 
   const GUEST_FILLER_MAX = 12;
 
-  // 공유 카드와 같은 1차 카테고리의 제목만 골라 최신순으로 배경 그리드를
+  // 공유 카드와 같은 1차 카테고리의 제목만 골라, 실제 사이트의 1차 카테고리
+  // 화면과 같은 순서(2차 카테고리 순서 → 각 안에서 기본순)로 배경 그리드를
   // 채운다. 화면이 넓을수록 grid의 auto-fill이 알아서 더 많은 열을 보여주니,
   // 여기서는 화면 크기를 따로 재지 않고 넉넉한 개수만 준비해두면 된다.
   function renderGuestFillerGrid(previews) {
     if (!isGuestMode || currentView !== 'category') return;
     const cat = currentCategory();
     if (!cat) return;
-    const subIds = new Set(cat.subs.map(s => s.id));
-    const filtered = previews
-      .filter(p => subIds.has(p.subcategoryId))
-      .sort((a, b) => yearMonthValue(b) - yearMonthValue(a))
-      .slice(0, GUEST_FILLER_MAX);
+    const filtered = defaultOrderedItems(previews, cat, null).slice(0, GUEST_FILLER_MAX);
 
     blockGrid.innerHTML = '';
     if (!filtered.length) {
@@ -1493,7 +1731,7 @@
     const blocks = allBlocks
       .filter(b => b.subcategoryId === currentTodoSub.selectedSubId)
       .slice()
-      .sort((a, b) => yearMonthValue(a) - yearMonthValue(b));
+      .sort((a, b) => dateSortValue(a) - dateSortValue(b));
 
     todoTableBody.innerHTML = '';
 
@@ -1625,7 +1863,7 @@
 
     editModalTitle.textContent = block ? '카드 수정' : '새 카드 추가';
     editTitleInput.value = block ? block.title || '' : '';
-    editYearMonthInput.value = formatYearMonth(block);
+    editYearMonthInput.value = formatDate(block);
     workingSegments = block
       ? migrateBlockToSegments(block).map(seg => {
         if (seg.type === 'text') return { type: 'text', id: seg.id, text: seg.text || '' };
@@ -2159,7 +2397,7 @@
     const blockId = currentBlockId;
     const subcategoryId = editSubcategorySelect.value;
     const existing = editingBlockId ? allBlocks.find(b => b.id === editingBlockId) : null;
-    const { year, month } = parseYearMonth(editYearMonthInput.value);
+    const { year, month, day } = parseDate(editYearMonthInput.value);
 
     editSaveBtn.disabled = true;
 
@@ -2199,12 +2437,22 @@
         title,
         year,
         month,
+        day,
         segments,
         thumbnailIds: workingThumbnailIds.filter(id => savedImageIds.includes(id)),
         todoImageIds: workingTodoImageIds.filter(id => savedReferenceItemIds.includes(id)),
         createdAt: existing ? existing.createdAt || Date.now() : Date.now(),
         updatedAt: Date.now()
       };
+
+      // 새 카드이거나 다른 2차 카테고리로 옮긴 카드는 그 카테고리의 맨 뒤로,
+      // 같은 카테고리에 그대로 있으면 기존 순서를 유지한다(순서를 한 번도 정한
+      // 적 없는 카드는 order 없이 그대로 둔다 — Firestore는 undefined를 못 쓴다).
+      if (!existing || existing.subcategoryId !== subcategoryId) {
+        block.order = nextOrderInSub(subcategoryId);
+      } else if (typeof existing.order === 'number') {
+        block.order = existing.order;
+      }
 
       await LookbookFirebase.saveBlock(block);
 

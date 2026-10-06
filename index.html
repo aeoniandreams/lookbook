@@ -130,12 +130,12 @@
       <div class="header-actions">
         <div class="dropdown" id="sortDropdown">
           <button type="button" class="dropdown-btn" id="sortDropdownBtn" aria-haspopup="listbox" aria-expanded="false">
-            <span class="dropdown-label" id="sortDropdownLabel">오래된순</span>
+            <span class="dropdown-label" id="sortDropdownLabel">기본순</span>
             <i data-lucide="chevron-down" class="dropdown-chevron"></i>
           </button>
           <ul class="dropdown-menu hidden" id="sortDropdownMenu" role="listbox">
-            <li class="dropdown-option" data-value="newest" role="option" aria-selected="false">최신순</li>
-            <li class="dropdown-option active" data-value="oldest" role="option" aria-selected="true">오래된순</li>
+            <li class="dropdown-option active" data-value="manual" role="option" aria-selected="true">기본순</li>
+            <li class="dropdown-option" data-value="design" role="option" aria-selected="false">디자인순</li>
           </ul>
         </div>
         <button id="addBlockBtn" class="primary-btn icon-only admin-only hidden" aria-label="카드 추가">
@@ -143,6 +143,8 @@
         </button>
       </div>
     </header>
+
+    <p id="reorderHint" class="reorder-hint hidden">카드를 끌어서 순서를 바꿀 수 있어요. 모바일에서는 카드를 길게 누른 채로 끌어주세요.</p>
 
     <section id="blockGrid" class="grid"></section>
 
@@ -225,9 +227,9 @@
     </div>
 
     <div class="field">
-      <label>년 / 월</label>
-      <input type="text" id="editYearMonthInput" placeholder="예: 2026.03." inputmode="numeric" maxlength="10">
-      <p class="hint">정렬 드롭다운의 최신순/오래된순 기준이에요. 비워두면 가장 오래된 것으로 취급돼요.</p>
+      <label>날짜 (선택)</label>
+      <input type="text" id="editYearMonthInput" placeholder="0000.00.00." inputmode="numeric" maxlength="12">
+      <p class="hint">정렬 드롭다운의 디자인순(최신순) 기준이에요. 비워둬도 저장할 수 있고, 비워두면 디자인순에서 맨 뒤로 가요.</p>
     </div>
 
     <div class="field">
