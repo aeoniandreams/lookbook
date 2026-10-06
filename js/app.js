@@ -1747,6 +1747,12 @@
     icons();
   }
 
+  // 표의 일러스트를 누르면 원본을 크게 보여준다(닫는 건 다른 라이트박스와 같다).
+  todoTableBody.addEventListener('click', e => {
+    const img = e.target.closest('.todo-thumbs img');
+    if (img) openImageLightbox(img.src);
+  });
+
   $('[data-close-todo]').addEventListener('click', closeTodoModal);
   todoModal.addEventListener('click', e => {
     if (e.target === todoModal) closeTodoModal();
