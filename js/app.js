@@ -1702,10 +1702,8 @@
 
   function renderTodoTable() {
     if (!currentTodoSub) return;
-    const blocks = allBlocks
-      .filter(b => b.subcategoryId === currentTodoSub.selectedSubId)
-      .slice()
-      .sort((a, b) => dateSortValue(a) - dateSortValue(b));
+    // 카드 목록의 '기본순'(드래그로 정한 순서)과 똑같이 보여주고, 따로 정렬을 바꿀 수는 없다.
+    const blocks = subOrderedItems(allBlocks, currentTodoSub.selectedSubId);
 
     todoTableBody.innerHTML = '';
 
