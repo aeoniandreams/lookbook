@@ -43,6 +43,7 @@
   const viewModal = $('#viewModal');
   const viewSegments = $('#viewSegments');
   const viewMeta = $('#viewMeta');
+  const viewDate = $('#viewDate');
   const viewTitle = $('#viewTitle');
 
   const imageLightbox = $('#imageLightbox');
@@ -792,7 +793,7 @@
     const mm = block.month ? String(block.month).padStart(2, '0') : null;
     const dd = block.month && block.day ? String(block.day).padStart(2, '0') : null;
     if (mm && dd) return `${block.year}.${mm}.${dd}.`;
-    return mm ? `${block.year}.${mm}.` : `${block.year}.`;
+    return mm ? `${block.year}.${mm}.` : String(block.year);
   }
 
   // 한 2차 카테고리 안의 순서(기본순). 드래그로 순서를 정한 카드(order)는 그
@@ -1421,6 +1422,9 @@
     const cat = findCategoryBySub(block.subcategoryId);
     viewMeta.textContent = cat ? `${cat.name} · ${sub.name}` : '';
     viewTitle.textContent = block.title || '(제목 없음)';
+    const dateText = formatDate(block);
+    viewDate.textContent = dateText ? `디자인 ${dateText}` : '';
+    viewDate.classList.toggle('hidden', !dateText);
   }
 
   function openViewModal(blockId) {
