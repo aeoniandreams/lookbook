@@ -755,9 +755,16 @@ body.is-reordering { -webkit-user-select: none; user-select: none; }
 .view-actions button svg { width: 13px; height: 13px; }
 
 .view-date {
+  text-transform: none;
   margin-top: 18px;
   margin-bottom: 0;
   text-align: left;
+}
+.view-date-row {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 14px;
+  row-gap: 2px;
 }
 .view-segments {
   display: flex;

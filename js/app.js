@@ -1414,6 +1414,14 @@
     return `<div class="gallery-block">${galleryHTML}<p class="gallery-comment">${escapeHTML(comment)}</p></div>`;
   }
 
+  // 따옴표를 뺀 마지막 글자의 받침 유무로 을/를을 고른다.
+  function eulReul(text) {
+    const last = text.replace(/['"’”\s]+$/, '').slice(-1);
+    const code = last.charCodeAt(0);
+    if (code >= 0xAC00 && code <= 0xD7A3) return (code - 0xAC00) % 28 === 0 ? '를' : '을';
+    return '를';
+  }
+
   function renderViewModalContent(block) {
     const segments = migrateBlockToSegments(block);
     viewSegments.innerHTML = segments.map(segmentViewHTML).join('');
@@ -1425,15 +1433,17 @@
     // 카드 맨 아래 문구. 날짜(년도)를 입력하지 않은 카드에는 아무것도 붙지 않는다.
     // 공유 링크(게스트)에서는 날짜/디자인 줄을 빼고 저작권 줄만 간단히 보여준다.
     const dateText = formatDate(block);
-    const lines = [];
-    if (dateText) {
-      if (!isGuestMode) lines.push(`${dateText} 디자인`);
-      lines.push(isGuestMode
-        ? `© ${block.year} 明. All rights reserved.`
-        : `© ${block.year} 明(@ae0niandreams). All rights reserved.`);
+    const rowParts = [];
+    if (cat && cat.work) {
+      rowParts.push(`<span>본 디자인은 ${escapeHTML(cat.work)}${eulReul(cat.work)} 기반으로 한 2차 창작물입니다.</span>`);
     }
-    viewDate.innerHTML = lines.map(l => `<div>${escapeHTML(l)}</div>`).join('');
-    viewDate.classList.toggle('hidden', !lines.length);
+    if (dateText && !isGuestMode) rowParts.push(`<span>${escapeHTML(dateText)} 디자인</span>`);
+    const yearText = block.year ? `${block.year} ` : '';
+    const owner = isGuestMode ? '明' : '明(@ae0niandreams)';
+    viewDate.innerHTML =
+      (rowParts.length ? `<div class="view-date-row">${rowParts.join('')}</div>` : '') +
+      `<div>${escapeHTML(`© ${yearText}${owner}. All rights reserved.`)}</div>`;
+    viewDate.classList.remove('hidden');
   }
 
   function openViewModal(blockId) {

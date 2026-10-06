@@ -1,9 +1,12 @@
+// 각 1차 카테고리의 work는 카드 맨 아래 "본 디자인은 ...을/를 기반으로 한 2차 창작물입니다."
+// 문구에 들어가는 원작 표기다.
 // 1차/2차 카테고리 정의. id는 고정 문자열로, 나중에 카테고리 이름이 바뀌어도
 // 저장된 카드와의 연결이 끊어지지 않도록 한다.
 const CATEGORIES = [
   {
     id: 'jung-yun',
     name: '中ゆん',
+    work: "만화 및 애니메이션 '문호 스트레이독스'",
     icon: 'ferris-wheel',
     subs: [
       { id: 'jung-yun-jakjung', name: '작중' },
@@ -15,6 +18,7 @@ const CATEGORIES = [
   {
     id: 'hyun-gaeul',
     name: '현가을',
+    work: "게임 '수상한 메신저'",
     icon: 'mail',
     subs: [
       { id: 'hyun-gaeul-jakjung', name: '작중' },
@@ -24,6 +28,7 @@ const CATEGORIES = [
   {
     id: 'yeongseok',
     name: '影夕',
+    work: "만화 및 애니메이션 '하이큐'",
     icon: 'volleyball',
     subs: [
       { id: 'yeongseok-jakjung', name: '작중' },
@@ -34,6 +39,7 @@ const CATEGORIES = [
   {
     id: 'ghimer',
     name: 'GhiMer',
+    work: "게임 '애프터라이프'",
     icon: 'butterfly', // lucide에 없어서 직접 그린 커스텀 아이콘 (app.js의 CUSTOM_ICONS 참고)
     subs: [
       { id: 'ghimer-part1', name: '전편' },
@@ -44,6 +50,7 @@ const CATEGORIES = [
   {
     id: 'sirene',
     name: 'Sirené',
+    work: "게임 '아르카나 트와일라잇'",
     icon: 'star',
     subs: [
       { id: 'sirene-main', name: '메인 스토리' },
@@ -54,6 +61,7 @@ const CATEGORIES = [
   {
     id: 'samryeon',
     name: '三蓮 / 대만하리',
+    work: "만화 및 애니메이션 '슬램덩크'",
     icon: 'basketball', // lucide에 없어서 직접 그린 커스텀 아이콘 (app.js의 CUSTOM_ICONS 참고)
     subs: [
       { id: 'samryeon-jakjung', name: '작중' },
