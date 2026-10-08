@@ -796,10 +796,10 @@
     return mm ? `${block.year}.${mm}.` : String(block.year);
   }
 
-  // 한 2차 카테고리 안의 순서(기본순). 드래그로 순서를 정한 카드(order)는 그
-  // 번호대로, 아직 한 번도 순서를 정하지 않은 예전 카드는 날짜 오래된 순으로
-  // 앞에 둔다 — 순서를 처음 건드리기 전까지 예전 화면 그대로 보이게 하고,
-  // 새로 추가한 카드(order가 맨 뒤 번호)는 항상 맨 끝에 붙게 하려는 것.
+  // 한 2차 카테고리 안의 순서(기본순). order가 있는 카드(드래그로 정했거나 새로
+  // 만든 카드)는 그 번호대로 앞에 오고, 아직 order가 없는 예전 카드는 날짜 오래된
+  // 순으로 그 뒤에 붙는다 — 순서를 처음 건드리기 전까지는 예전 화면 그대로 보이고,
+  // 새로 만든 카드(order가 맨 앞 번호)는 항상 맨 앞에 오게 하려는 것.
   function subOrderedItems(items, subId) {
     const list = items.filter(b => b.subcategoryId === subId);
     const unordered = list
@@ -808,7 +808,7 @@
     const ordered = list
       .filter(b => typeof b.order === 'number')
       .sort((a, b) => a.order - b.order);
-    return unordered.concat(ordered);
+    return ordered.concat(unordered);
   }
 
   // 1차 카테고리 전체는 위에 있는 2차 카테고리가 우선이고, 각 2차 카테고리
@@ -818,11 +818,12 @@
     return subs.flatMap(s => subOrderedItems(items, s.id));
   }
 
-  function nextOrderInSub(subId) {
+  // 새 카드가 들어갈 자리: 그 2차 카테고리의 맨 앞(기존 최소 번호보다 하나 작은 번호).
+  function frontOrderInSub(subId) {
     const orders = allBlocks
       .filter(b => b.subcategoryId === subId && typeof b.order === 'number')
       .map(b => b.order);
-    return orders.length ? Math.max(...orders) + 1 : 0;
+    return orders.length ? Math.min(...orders) - 1 : 0;
   }
 
   function visibleBlocks() {
@@ -2423,11 +2424,11 @@
         updatedAt: Date.now()
       };
 
-      // 새 카드이거나 다른 2차 카테고리로 옮긴 카드는 그 카테고리의 맨 뒤로,
+      // 새 카드이거나 다른 2차 카테고리로 옮긴 카드는 그 카테고리의 맨 앞으로,
       // 같은 카테고리에 그대로 있으면 기존 순서를 유지한다(순서를 한 번도 정한
       // 적 없는 카드는 order 없이 그대로 둔다 — Firestore는 undefined를 못 쓴다).
       if (!existing || existing.subcategoryId !== subcategoryId) {
-        block.order = nextOrderInSub(subcategoryId);
+        block.order = frontOrderInSub(subcategoryId);
       } else if (typeof existing.order === 'number') {
         block.order = existing.order;
       }
